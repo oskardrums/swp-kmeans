@@ -120,6 +120,31 @@ void km_update(struct km_ctx_s * ctx, double * w)
     km_update_at(ctx, s, w);
 }
 
+int km_scan_input(struct km_ctx_s * ctx)
+{
+    char     c = 0;
+    double   f = 0;
+    size_t   i = 0;
+    double * w = (double *) malloc (sizeof(double) * ctx->dimension);
+
+    if (w == NULL) {
+        perror("km_scan_input: malloc");
+        return -1;
+    }
+
+    while (scanf("%lf%c", &f, &c) == 2) {
+        *(w + i) = f;
+        if (++i == ctx->dimension) {
+            km_update(ctx, w);
+            i = 0;
+            // XXX - check stop conditions
+        }
+    }
+
+    return 0;
+}
+
+
 int main(int argc, char *argv[]) {
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
@@ -129,7 +154,12 @@ int main(int argc, char *argv[]) {
     m = atoi(argv[4]);
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
-        return 1;
+        perror("main: km_create failed");
+        return -1;
+    }
+    if (km_scan_input(ctx) < 0) {
+        perror("main: km_scan_input failed");
+        return -2;
     }
     km_dump(ctx);
     km_destroy(ctx);
