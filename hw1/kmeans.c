@@ -7,8 +7,9 @@ struct km_ctx_s {
     size_t   nobserves; // total # of observations
     size_t   max_iters; // MAX_ITER
     size_t   inits_set; // number initial mean values inserted so far
-    size_t * cardinals; // cardinalities of clusters, array of size k
-    double * mean_vals; // mean values, array of k * d
+    size_t * cardinals; // cardinalities of clusters, array of size K
+    double * mean_vals; // mean values, array of K * d
+    double * data_vals; // input values, array of N * d
 };
 
 void km_dump(struct km_ctx_s * ctx)
@@ -40,19 +41,26 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     ctx->cardinals = (size_t *) calloc (sizeof(size_t), ctx->nclusters);
     if (ctx->cardinals == NULL) {
         perror("km_create: allocate cardinalities vector");
-        free(ctx);
+        km_destroy(ctx);
         return NULL;
     }
     memset(ctx->cardinals, 0, sizeof(size_t) * ctx->nclusters);
 
     ctx->mean_vals = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
     if (ctx->mean_vals == NULL) {
-        perror("km_create: allocate observation matrix");
-        free(ctx->cardinals);
-        free(ctx);
+        perror("km_create: allocate centroids matrix");
+        km_destroy(ctx);
         return NULL;
     }
-    memset(ctx->mean_vals, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
+    memset(ctx->mean_vals, 0, sizeof(double) * ctx->nobserves * ctx->dimension);
+
+    ctx->data_vals = (double *) calloc (sizeof(double), ctx->nobserves * ctx->dimension);
+    if (ctx->data_vals == NULL) {
+        perror("km_create: allocate observation matrix");
+        km_destroy(ctx);
+        return NULL;
+    }
+    memset(ctx->data_vals, 0, sizeof(double) * ctx->nobserves * ctx->dimension);
 
     return ctx;
 }
@@ -65,6 +73,9 @@ void km_destroy(struct km_ctx_s * ctx)
         }
         if (ctx->mean_vals != NULL) {
             free(ctx->mean_vals);
+        }
+        if (ctx->data_vals != NULL) {
+            free(ctx->data_vals);
         }
         free(ctx);
     }
@@ -111,38 +122,77 @@ void km_update_at(struct km_ctx_s * ctx, size_t cluster_id, double * w)
 
 void km_update(struct km_ctx_s * ctx, double * w)
 {
-    size_t s = 0;
-    if (ctx->inits_set == ctx->nclusters) {
-        s = km_cluster(ctx, w);
-    } else {
-        s = ctx->inits_set++;
+    size_t j, s = 0;
+    if (ctx->inits_set < ctx->nclusters) {
+        for (j = 0; j < ctx->dimension; ++j) {
+            *(ctx->mean_vals + (ctx->dimension * ctx->inits_set) + j) = *(w + j);
+        }
+        (*(ctx->cardinals + ctx->inits_set))++;
     }
-    km_update_at(ctx, s, w);
+
+    for (j = 0; j < ctx->dimension; ++j) {
+        *(ctx->data_vals + (ctx->dimension * ctx->inits_set) + j) = *(w + j);
+    }
+
+    ctx->inits_set++;
 }
 
 int km_scan_input(struct km_ctx_s * ctx)
 {
-    char     c = 0;
-    double   f = 0;
-    size_t   i = 0;
-    double * w = (double *) malloc (sizeof(double) * ctx->dimension);
-
+    char c = 0;
+    double f = 0;
+    size_t i, j;
+    double * w = NULL;
+    
+    w = (double *) malloc (sizeof(double) * ctx->dimension);
     if (w == NULL) {
         perror("km_scan_input: malloc");
         return -1;
     }
 
-    while (scanf("%lf%c", &f, &c) == 2) {
-        *(w + i) = f;
-        if (++i == ctx->dimension) {
-            km_update(ctx, w);
-            i = 0;
-            // XXX - check stop conditions
+    for (i = 0; i < ctx->nobserves; ++i) {
+        for (j = 0; j < ctx->dimension; ++j) {
+            if (scanf("%lf%c", &f, &c) != 2) {
+                perror("km_scan_input: bad input at %u, %u", i, j);
+                return -1;
+            }
+            *(w + j) = f;
         }
+        km_update(ctx, w);
     }
+
+    free(w);
+    w = NULL;
 
     return 0;
 }
+
+int km_converge(struct km_ctx_s * ctx)
+{
+    size_t i, j;
+    double * new_means = NULL;
+
+    new_means = (double *) malloc (sizeof(double) * 
+
+    new_means = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
+    if (new_means == NULL) {
+        perror("km_converge: allocate new centroids matrix");
+    }
+    memset(new_means, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
+    for (i = 0; i < ctx->nobserves; ++i) {
+    }
+}
+
+
+/*
+ * The plan:
+ * * Parse cmdline
+ * * Build kmeans context
+ * * * Hold K, d, N, MAX_ITER
+ * * Allocate space for centroids
+ * * Populate initial centroids
+ * * ...
+ */
 
 
 int main(int argc, char *argv[]) {
@@ -161,6 +211,11 @@ int main(int argc, char *argv[]) {
         perror("main: km_scan_input failed");
         return -2;
     }
+    if (km_converge(ctx) < 0) {
+        perror("main: km_converge failed");
+        return -3;
+    }
+
     km_dump(ctx);
     km_destroy(ctx);
     return 0;
