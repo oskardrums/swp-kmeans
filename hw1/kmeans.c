@@ -20,7 +20,7 @@ void km_dump(struct km_ctx_s * ctx)
         for (j = 0; j < ctx->dimension - 1; ++j) {
             printf("%.2f,", *(ctx->mean_vals + (ctx->dimension * i) + j));
         }
-        printf("%.2f\n", *(ctx->mean_vals + (ctx->dimension * i) + j + 1));
+        printf("%.2f\n", *(ctx->mean_vals + (ctx->dimension * i) + j));
     }
 }
 
@@ -55,7 +55,7 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     ctx->max_iters = m;
     ctx->inits_set = 0;
 
-    ctx->cardinals = (size_t *) calloc (sizeof(size_t), ctx->nclusters);
+    ctx->cardinals = (size_t *) malloc (ctx->nclusters * sizeof(size_t));
     if (ctx->cardinals == NULL) {
         perror("km_create: allocate cardinalities vector");
         km_destroy(ctx);
@@ -63,15 +63,15 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     }
     memset(ctx->cardinals, 0, sizeof(size_t) * ctx->nclusters);
 
-    ctx->mean_vals = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
+    ctx->mean_vals = (double *) malloc (ctx->nclusters * ctx->dimension * sizeof(double));
     if (ctx->mean_vals == NULL) {
         perror("km_create: allocate centroids matrix");
         km_destroy(ctx);
         return NULL;
     }
-    memset(ctx->mean_vals, 0, sizeof(double) * ctx->nobserves * ctx->dimension);
+    memset(ctx->mean_vals, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
 
-    ctx->data_vals = (double *) calloc (sizeof(double), ctx->nobserves * ctx->dimension);
+    ctx->data_vals = (double *) malloc (ctx->nobserves * ctx->dimension * sizeof(double));
     if (ctx->data_vals == NULL) {
         perror("km_create: allocate observation matrix");
         km_destroy(ctx);
@@ -171,14 +171,14 @@ int km_iterate(struct km_ctx_s * ctx)
     double * new_means = NULL, * temp = NULL;
     size_t * new_cards = NULL;
 
-    new_means = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
+    new_means = (double *) malloc (ctx->nclusters * ctx->dimension * sizeof(double));
     if (new_means == NULL) {
         perror("km_converge: allocate new centroids matrix");
         return -1;
     }
     memset(new_means, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
 
-    new_cards = (size_t *) calloc (sizeof(size_t), ctx->nclusters);
+    new_cards = (size_t *) malloc (ctx->nclusters * sizeof(size_t));
     if (new_cards == NULL) {
         perror("km_converge: allocate new cardinalities vector");
         return -1;
@@ -251,16 +251,23 @@ int main(int argc, char *argv[]) {
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
 
+    // printf("[*] starting\n");
+
     d = atoi(argv[1]);
     k = atoi(argv[2]);
     n = atoi(argv[3]);
     m = atoi(argv[4]);
+
+    // printf("[*] K=%d, d=%d, N=%d, MAX_ITER=%d\n", k, d, n, m);
+
 
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
         perror("main: km_create failed");
         return -1;
     }
+
+    // printf("[*] created context\n");
 
     if (km_scan_input(ctx) < 0) {
         perror("main: km_scan_input failed");
