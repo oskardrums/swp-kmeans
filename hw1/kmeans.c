@@ -24,6 +24,22 @@ void km_dump(struct km_ctx_s * ctx)
     }
 }
 
+void km_destroy(struct km_ctx_s * ctx)
+{
+    if (ctx != NULL) {
+        if (ctx->cardinals != NULL) {
+            free(ctx->cardinals);
+        }
+        if (ctx->mean_vals != NULL) {
+            free(ctx->mean_vals);
+        }
+        if (ctx->data_vals != NULL) {
+            free(ctx->data_vals);
+        }
+        free(ctx);
+    }
+}
+
 struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
 {
     struct km_ctx_s * ctx = (struct km_ctx_s *) malloc (sizeof(struct km_ctx_s));
@@ -64,22 +80,6 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     memset(ctx->data_vals, 0, sizeof(double) * ctx->nobserves * ctx->dimension);
 
     return ctx;
-}
-
-void km_destroy(struct km_ctx_s * ctx)
-{
-    if (ctx != NULL) {
-        if (ctx->cardinals != NULL) {
-            free(ctx->cardinals);
-        }
-        if (ctx->mean_vals != NULL) {
-            free(ctx->mean_vals);
-        }
-        if (ctx->data_vals != NULL) {
-            free(ctx->data_vals);
-        }
-        free(ctx);
-    }
 }
 
 double km_distance(struct km_ctx_s * ctx, size_t cluster_id, double * w)
@@ -126,12 +126,12 @@ void km_update(struct km_ctx_s * ctx, size_t i, double * w)
     size_t j, s = 0;
     if (i < ctx->nclusters) {
         for (j = 0; j < ctx->dimension; ++j) {
-            *(ctx->mean_vals + (ctx->dimension * i) + j) = *(w[j]);
+            *(ctx->mean_vals + (ctx->dimension * i) + j) = w[j];
         }
     }
 
     for (j = 0; j < ctx->dimension; ++j) {
-        *(ctx->data_vals + (ctx->dimension * i) + j) = *(w[j]);
+        *(ctx->data_vals + (ctx->dimension * i) + j) = w[j];
     }
 }
 
@@ -151,7 +151,7 @@ int km_scan_input(struct km_ctx_s * ctx)
     for (i = 0; i < ctx->nobserves; ++i) {
         for (j = 0; j < ctx->dimension; ++j) {
             if (scanf("%lf%c", &f, &c) != 2) {
-                perror("km_scan_input: bad input at %u, %u", i, j);
+                perror("km_scan_input: bad input");
                 return -1;
             }
             *(w + j) = f;
@@ -165,10 +165,11 @@ int km_scan_input(struct km_ctx_s * ctx)
     return 0;
 }
 
-int km_iterate(struct km_ctx_s * ctx, double * output)
+int km_iterate(struct km_ctx_s * ctx)
 {
-    size_t i, j;
-    double * new_means = NULL;
+    size_t i, j, s = 0;
+    double * new_means = NULL, * temp = NULL;
+    size_t * new_cards = NULL;
 
     new_means = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
     if (new_means == NULL) {
@@ -192,24 +193,28 @@ int km_iterate(struct km_ctx_s * ctx, double * output)
         // iterate over the observation's entries
         for (j = 0; j < ctx->dimension; ++j) {
             // new_means[s][j] = (new_means[s][j] * new_cards[s] + observation[j]) / (new_cards[s] + 1)
-            *(new_means + (s * ctx->dimension) + j) *= *(new_cards + s);
+            *(new_means + (s * ctx->dimension) + j) *= new_cards[s];
             *(new_means + (s * ctx->dimension) + j) += *(ctx->data_vals + (i * ctx->dimension) + j);
-            *(new_means + (s * ctx->dimension) + j) /= (*(new_cards + s) + 1;
+            *(new_means + (s * ctx->dimension) + j) /= new_cards[s] + 1;
         }
         // new_cards[s] += 1
-        *(new_cards + s)++;
+        new_cards[s]++;
     }
 
+    // compare new_means to the current ones
     for (i = 0; i < ctx->nclusters; ++i) {
         for (j = 0; j < ctx->dimension; ++j) {
             if ( *(new_means + (i * ctx->dimension) + j) != *(ctx->mean_vals + (i * ctx->dimension) + j) ) {
                 temp = ctx->mean_vals;
                 ctx->mean_vals = new_means;
                 free(temp);
+                free(new_cards);
                 return 0;
             }
         }
     }
+    free(new_means);
+    free(new_cards);
     return 1;
 }
 
@@ -245,25 +250,31 @@ int km_converge(struct km_ctx_s * ctx)
 int main(int argc, char *argv[]) {
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
+
     d = atoi(argv[1]);
     k = atoi(argv[2]);
     n = atoi(argv[3]);
     m = atoi(argv[4]);
+
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
         perror("main: km_create failed");
         return -1;
     }
+
     if (km_scan_input(ctx) < 0) {
         perror("main: km_scan_input failed");
         return -2;
     }
+
     if (km_converge(ctx) < 0) {
         perror("main: km_converge failed");
         return -3;
     }
 
     km_dump(ctx);
+
     km_destroy(ctx);
+
     return 0;
 }
