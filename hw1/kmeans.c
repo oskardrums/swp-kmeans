@@ -7,6 +7,7 @@ struct km_ctx_s {
     size_t   nobserves; // total # of observations
     size_t   max_iters; // MAX_ITER
     size_t   inits_set; // number initial mean values inserted so far
+    size_t * ob_clusts; // array of size N, observation index -> cluster index
     size_t * cardinals; // cardinalities of clusters, array of size K
     double * mean_vals; // mean values, array of K * d
     double * data_vals; // input values, array of N * d
@@ -120,21 +121,18 @@ void km_update_at(struct km_ctx_s * ctx, size_t cluster_id, double * w)
     }
 }
 
-void km_update(struct km_ctx_s * ctx, double * w)
+void km_update(struct km_ctx_s * ctx, size_t i, double * w)
 {
     size_t j, s = 0;
-    if (ctx->inits_set < ctx->nclusters) {
+    if (i < ctx->nclusters) {
         for (j = 0; j < ctx->dimension; ++j) {
-            *(ctx->mean_vals + (ctx->dimension * ctx->inits_set) + j) = *(w + j);
+            *(ctx->mean_vals + (ctx->dimension * i) + j) = *(w[j]);
         }
-        (*(ctx->cardinals + ctx->inits_set))++;
     }
 
     for (j = 0; j < ctx->dimension; ++j) {
-        *(ctx->data_vals + (ctx->dimension * ctx->inits_set) + j) = *(w + j);
+        *(ctx->data_vals + (ctx->dimension * i) + j) = *(w[j]);
     }
-
-    ctx->inits_set++;
 }
 
 int km_scan_input(struct km_ctx_s * ctx)
@@ -158,7 +156,7 @@ int km_scan_input(struct km_ctx_s * ctx)
             }
             *(w + j) = f;
         }
-        km_update(ctx, w);
+        km_update(ctx, i, w);
     }
 
     free(w);
@@ -167,21 +165,9 @@ int km_scan_input(struct km_ctx_s * ctx)
     return 0;
 }
 
-void km_update_at(struct km_ctx_s * ctx, size_t cluster_id, double * w, double * output)
+int km_iterate(struct km_ctx_s * ctx, double * output)
 {
-    double * u = NULL;
-    size_t j, c = 0;
-    for (j = 0; j < ctx->dimension; ++j) {
-        c = (*(ctx->cardinals + cluster_id))++;
-        u = ctx->mean_vals + (ctx->dimension * cluster_id) + j;
-        *(output + j) = ((*u)*c + (*(w + j))) / (c + 1);
-    }
-}
-
-int km_converge(struct km_ctx_s * ctx)
-{
-    size_t i, j, iter;
-    double * old_means = NULL;
+    size_t i, j;
     double * new_means = NULL;
 
     new_means = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
@@ -198,11 +184,50 @@ int km_converge(struct km_ctx_s * ctx)
     }
     memset(new_cards, 0, sizeof(size_t) * ctx->nclusters);
 
-    for (iter = 0; iter < ctx->max_iters; ++iter) {
-        for (i = 0; i < ctx->nobserves; ++i) {
-            s = km_cluster(ctx, ctx->data_vals + (i * ctx->dimension));
+    // iterate over all observavtions
+    for (i = 0; i < ctx->nobserves; ++i) {
+        // calculate cluster index for the current observation
+        s = km_cluster(ctx, ctx->data_vals + (i * ctx->dimension));
+
+        // iterate over the observation's entries
+        for (j = 0; j < ctx->dimension; ++j) {
+            // new_means[s][j] = (new_means[s][j] * new_cards[s] + observation[j]) / (new_cards[s] + 1)
+            *(new_means + (s * ctx->dimension) + j) *= *(new_cards + s);
+            *(new_means + (s * ctx->dimension) + j) += *(ctx->data_vals + (i * ctx->dimension) + j);
+            *(new_means + (s * ctx->dimension) + j) /= (*(new_cards + s) + 1;
+        }
+        // new_cards[s] += 1
+        *(new_cards + s)++;
+    }
+
+    for (i = 0; i < ctx->nclusters; ++i) {
+        for (j = 0; j < ctx->dimension; ++j) {
+            if ( *(new_means + (i * ctx->dimension) + j) != *(ctx->mean_vals + (i * ctx->dimension) + j) ) {
+                temp = ctx->mean_vals;
+                ctx->mean_vals = new_means;
+                free(temp);
+                return 0;
+            }
         }
     }
+    return 1;
+}
+
+int km_converge(struct km_ctx_s * ctx)
+{
+    int r = -1;
+    size_t iter;
+
+    for (iter = 0; iter < ctx->max_iters; ++iter) {
+        if (r = km_iterate(ctx)) {
+            return 1;
+        } else if (r < 0) {
+            perror("km_converge: km_iterate failed");
+            return  -1;
+        }
+    }
+
+    return 0;
 }
 
 
