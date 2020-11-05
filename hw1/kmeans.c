@@ -167,19 +167,41 @@ int km_scan_input(struct km_ctx_s * ctx)
     return 0;
 }
 
+void km_update_at(struct km_ctx_s * ctx, size_t cluster_id, double * w, double * output)
+{
+    double * u = NULL;
+    size_t j, c = 0;
+    for (j = 0; j < ctx->dimension; ++j) {
+        c = (*(ctx->cardinals + cluster_id))++;
+        u = ctx->mean_vals + (ctx->dimension * cluster_id) + j;
+        *(output + j) = ((*u)*c + (*(w + j))) / (c + 1);
+    }
+}
+
 int km_converge(struct km_ctx_s * ctx)
 {
-    size_t i, j;
+    size_t i, j, iter;
+    double * old_means = NULL;
     double * new_means = NULL;
-
-    new_means = (double *) malloc (sizeof(double) * 
 
     new_means = (double *) calloc (sizeof(double), ctx->nclusters * ctx->dimension);
     if (new_means == NULL) {
         perror("km_converge: allocate new centroids matrix");
+        return -1;
     }
     memset(new_means, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
-    for (i = 0; i < ctx->nobserves; ++i) {
+
+    new_cards = (size_t *) calloc (sizeof(size_t), ctx->nclusters);
+    if (new_cards == NULL) {
+        perror("km_converge: allocate new cardinalities vector");
+        return -1;
+    }
+    memset(new_cards, 0, sizeof(size_t) * ctx->nclusters);
+
+    for (iter = 0; iter < ctx->max_iters; ++iter) {
+        for (i = 0; i < ctx->nobserves; ++i) {
+            s = km_cluster(ctx, ctx->data_vals + (i * ctx->dimension));
+        }
     }
 }
 
