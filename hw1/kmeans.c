@@ -1,21 +1,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
 struct km_ctx_s {
-    size_t   dimension; // dimension
-    size_t   nclusters; // # of clusters
-    size_t   nobserves; // total # of observations
-    size_t   max_iters; // MAX_ITER
-    size_t   inits_set; // number initial mean values inserted so far
-    size_t * ob_clusts; // array of size N, observation index -> cluster index
-    size_t * cardinals; // cardinalities of clusters, array of size K
-    double * mean_vals; // mean values, array of K * d
-    double * data_vals; // input values, array of N * d
+    size_t   dimension; /* dimension */
+    size_t   nclusters; /* # of clusters */
+    size_t   nobserves; /* total # of observations */
+    size_t   max_iters; /* MAX_ITER */
+    size_t   inits_set; /* number initial mean values inserted so far */
+    size_t * ob_clusts; /* array of size N, observation index -> cluster index */
+    size_t * cardinals; /* cardinalities of clusters, array of size K */
+    double * mean_vals; /* mean values, array of K * d */
+    double * data_vals; /* input values, array of N * d */
 };
 
 void km_dump(struct km_ctx_s * ctx)
 {
-    int i, j;
+    size_t i, j;
     for (i = 0; i < ctx->nclusters; ++i) {
         for (j = 0; j < ctx->dimension - 1; ++j) {
             printf("%.2f,", *(ctx->mean_vals + (ctx->dimension * i) + j));
@@ -85,7 +86,7 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
 double km_distance(struct km_ctx_s * ctx, size_t cluster_id, double * w)
 {
     double d = 0, a = 0;
-    int j;
+    size_t j;
 
     for (j = 0; j < ctx->dimension; ++j) {
         a = (*(ctx->mean_vals + (ctx->dimension * cluster_id) + j)) - (*(w + j));
@@ -110,20 +111,9 @@ size_t km_cluster(struct km_ctx_s * ctx, double * w)
     return s;
 }
 
-void km_update_at(struct km_ctx_s * ctx, size_t cluster_id, double * w)
-{
-    double * u = NULL;
-    size_t j, c = 0;
-    for (j = 0; j < ctx->dimension; ++j) {
-        c = (*(ctx->cardinals + cluster_id))++;
-        u = ctx->mean_vals + (ctx->dimension * cluster_id) + j;
-        *u = ((*u)*c + (*(w + j))) / (c + 1);
-    }
-}
-
 void km_update(struct km_ctx_s * ctx, size_t i, double * w)
 {
-    size_t j, s = 0;
+    size_t j;
     if (i < ctx->nclusters) {
         for (j = 0; j < ctx->dimension; ++j) {
             *(ctx->mean_vals + (ctx->dimension * i) + j) = w[j];
@@ -185,23 +175,23 @@ int km_iterate(struct km_ctx_s * ctx)
     }
     memset(new_cards, 0, sizeof(size_t) * ctx->nclusters);
 
-    // iterate over all observavtions
+    /* iterate over all observavtions */
     for (i = 0; i < ctx->nobserves; ++i) {
-        // calculate cluster index for the current observation
+        /* calculate cluster index for the current observation */
         s = km_cluster(ctx, ctx->data_vals + (i * ctx->dimension));
 
-        // iterate over the observation's entries
+        /* iterate over the observation's entries */
         for (j = 0; j < ctx->dimension; ++j) {
-            // new_means[s][j] = (new_means[s][j] * new_cards[s] + observation[j]) / (new_cards[s] + 1)
+            /* new_means[s][j] = (new_means[s][j] * new_cards[s] + observation[j]) / (new_cards[s] + 1) */
             *(new_means + (s * ctx->dimension) + j) *= new_cards[s];
             *(new_means + (s * ctx->dimension) + j) += *(ctx->data_vals + (i * ctx->dimension) + j);
             *(new_means + (s * ctx->dimension) + j) /= new_cards[s] + 1;
         }
-        // new_cards[s] += 1
+        /* new_cards[s] += 1 */
         new_cards[s]++;
     }
 
-    // compare new_means to the current ones
+    /* compare new_means to the current ones */
     for (i = 0; i < ctx->nclusters; ++i) {
         for (j = 0; j < ctx->dimension; ++j) {
             if ( *(new_means + (i * ctx->dimension) + j) != *(ctx->mean_vals + (i * ctx->dimension) + j) ) {
@@ -224,7 +214,7 @@ int km_converge(struct km_ctx_s * ctx)
     size_t iter;
 
     for (iter = 0; iter < ctx->max_iters; ++iter) {
-        if (r = km_iterate(ctx)) {
+        if ((r = km_iterate(ctx)) == 1) {
             return 1;
         } else if (r < 0) {
             perror("km_converge: km_iterate failed");
@@ -235,39 +225,25 @@ int km_converge(struct km_ctx_s * ctx)
     return 0;
 }
 
-
-/*
- * The plan:
- * * Parse cmdline
- * * Build kmeans context
- * * * Hold K, d, N, MAX_ITER
- * * Allocate space for centroids
- * * Populate initial centroids
- * * ...
- */
-
-
 int main(int argc, char *argv[]) {
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
 
-    // printf("[*] starting\n");
+    if (argc != 5) {
+        printf("usage: %s K N d MAX_ITER < infile > outfile\n", argv[0]);
+        return 1;
+    }
 
-    d = atoi(argv[1]);
-    k = atoi(argv[2]);
-    n = atoi(argv[3]);
+    k = atoi(argv[1]);
+    n = atoi(argv[2]);
+    d = atoi(argv[3]);
     m = atoi(argv[4]);
-
-    // printf("[*] K=%d, d=%d, N=%d, MAX_ITER=%d\n", k, d, n, m);
-
 
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
         perror("main: km_create failed");
         return -1;
     }
-
-    // printf("[*] created context\n");
 
     if (km_scan_input(ctx) < 0) {
         perror("main: km_scan_input failed");
