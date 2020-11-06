@@ -239,6 +239,11 @@ int main(int argc, char *argv[]) {
     d = atoi(argv[3]);
     m = atoi(argv[4]);
 
+    if (k <= 0 || n <= k || d <= 0 || m <= 0) {
+        printf("%s: bad argument\n", argv[0]);
+        return 2;
+    }
+
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
         perror("main: km_create failed");
