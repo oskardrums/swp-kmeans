@@ -1,17 +1,17 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 struct km_ctx_s {
-    size_t   dimension; /* dimension */
-    size_t   nclusters; /* # of clusters */
-    size_t   nobserves; /* total # of observations */
-    size_t   max_iters; /* MAX_ITER */
-    size_t   inits_set; /* number initial mean values inserted so far */
+    size_t   dimension; /* dimension                                           */
+    size_t   nclusters; /* # of clusters                                       */
+    size_t   nobserves; /* total # of observations                             */
+    size_t   max_iters; /* MAX_ITER                                            */
+    size_t   inits_set; /* number initial mean values inserted so far          */
     size_t * ob_clusts; /* array of size N, observation index -> cluster index */
-    size_t * cardinals; /* cardinalities of clusters, array of size K */
-    double * mean_vals; /* mean values, array of K * d */
-    double * data_vals; /* input values, array of N * d */
+    size_t * cardinals; /* cardinalities of clusters, array of size K          */
+    double * mean_vals; /* mean values, array of K * d                         */
+    double * data_vals; /* input values, array of N * d                        */
 };
 
 void km_dump(struct km_ctx_s * ctx)
@@ -163,14 +163,14 @@ int km_iterate(struct km_ctx_s * ctx)
 
     new_means = (double *) malloc (ctx->nclusters * ctx->dimension * sizeof(double));
     if (new_means == NULL) {
-        perror("km_converge: allocate new centroids matrix");
+        perror("km_iterate allocate new centroids matrix");
         return -1;
     }
     memset(new_means, 0, sizeof(double) * ctx->nclusters * ctx->dimension);
 
     new_cards = (size_t *) malloc (ctx->nclusters * sizeof(size_t));
     if (new_cards == NULL) {
-        perror("km_converge: allocate new cardinalities vector");
+        perror("km_iterate allocate new cardinalities vector");
         return -1;
     }
     memset(new_cards, 0, sizeof(size_t) * ctx->nclusters);
