@@ -37,11 +37,6 @@ class KmContext(object):
         for _ in range(self.max_iterations):
             for i in range(self.num_observations):
                 
-
-
-
-
-
 def scanner():
     while True:
         try:
