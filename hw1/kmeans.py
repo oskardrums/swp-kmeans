@@ -3,7 +3,7 @@ import argparse
 
 class Observation(object):
     def __init__(self, dimension):
-        self.vector = None
+        self.vector = [0.] * dimension
         self.cluster = 0
 
     def set_vector(self, vector):
@@ -11,8 +11,8 @@ class Observation(object):
 
 class Cluster(object):
     def __init__(self, dimension):
-        self.centroid = None
         self.dimension = dimension
+        self.centroid = [0.] * self.dimension
         self.cardinality = 0
 
     def set_center(self, vector):
@@ -27,10 +27,10 @@ class Cluster(object):
 
     def add(self, ob):
         vector = ob.vector
-        self.centroid = (
-                (self.centroid[i] * self.cardinality + vector[i]) / self.cardinality + 1
+        self.centroid = [
+                (self.centroid[i] * self.cardinality + vector[i]) / (self.cardinality + 1)
                 for i in range(self.dimension)
-                )
+                ]
         self.cardinality += 1
 
 
@@ -41,33 +41,33 @@ class KmContext(object):
         self.num_observations = n
         self.dimension = d
         self.max_iterations = m
-        self.clusters = [Cluster(self.dimension)] * self.num_clusters
-        self.observations = [Observation(self.dimension)] * self.num_observations
+        self.clusters = [Cluster(self.dimension) for _ in range(self.num_clusters)]
+        self.observations = [Observation(self.dimension) for _ in range(self.num_observations)]
 
     def observe(self, vector):
         if self.num_observed < self.num_clusters:
-            self.clusters[self.num_observed].set_vector(vector)
-        self.observations[self.num_observed].set_center(vector)
+            self.clusters[self.num_observed].set_center(vector)
+        self.observations[self.num_observed].set_vector(vector)
         self.num_observed += 1
 
     def choose_cluster(self, ob):
         res = 0
-        dis = self.clusters[res].distance(ob)
+        dis = self.clusters[0].distance(ob)
         for i, cluster in enumerate(self.clusters[1:]):
             d = cluster.distance(ob)
             if d < dis:
                 dis = d
-                res = i
+                res = i + 1
         return res
 
     def converge(self):
         for _ in range(self.max_iterations):
-            next_clusters = [Cluster(self.dimension)] * self.num_clusters
+            next_clusters = [Cluster(self.dimension) for _ in range(self.num_clusters)]
             for i in range(self.num_observations):
                 curr_ob = self.observations[i]
                 curr_cluster_index = self.choose_cluster(curr_ob)
                 next_clusters[curr_cluster_index].add(curr_ob)
-            if all(lambda i: self.clusters[i] == next_clusters[i], range(self.clusters)):
+            if all(map(lambda i: self.clusters[i] == next_clusters[i], range(self.num_clusters))):
                 return 1
             else:
                 self.clusters = next_clusters
@@ -75,13 +75,12 @@ class KmContext(object):
 
     def dump(self):
         for cluster in self.clusters:
-            print(",".join(map(lambda f: str(round(f, 2)), cluster.vector)))
+            print(",".join(map(lambda f: str(round(f, 2)), cluster.centroid)))
 
-                
 def scanner():
     while True:
         try:
-            yield map(float, input().split(","))
+            yield list(map(float, input().split(",")))
         except EOFError:
             break
 
