@@ -83,7 +83,7 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     return ctx;
 }
 
-double km_distance(struct km_ctx_s * ctx, size_t cluster_id, double * w)
+double km_distance_squared(struct km_ctx_s * ctx, size_t cluster_id, double * w)
 {
     double d = 0, a = 0;
     size_t j;
@@ -100,9 +100,9 @@ size_t km_cluster(struct km_ctx_s * ctx, double * w)
 {
     size_t i, s = 0;
     double last, curr = 0;
-    last = km_distance(ctx, 0, w);
+    last = km_distance_squared(ctx, 0, w);
     for (i = 1; i < ctx->nclusters; ++i) {
-        curr = km_distance(ctx, i, w);
+        curr = km_distance_squared(ctx, i, w);
         if (curr < last) {
             s = i;
             last = curr;

@@ -1,4 +1,5 @@
 #!/bin/env python3
+
 import argparse
 
 class Observation(object):
@@ -21,7 +22,7 @@ class Cluster(object):
     def __eq__(self, other):
         return self.centroid == other.centroid
 
-    def distance(self, ob):
+    def distance_squared(self, ob):
         vector = ob.vector
         return sum(((self.centroid[i] - vector[i])**2 for i in range(self.dimension)))
 
@@ -52,9 +53,9 @@ class KmContext(object):
 
     def choose_cluster(self, ob):
         res = 0
-        dis = self.clusters[0].distance(ob)
+        dis = self.clusters[0].distance_squared(ob)
         for i, cluster in enumerate(self.clusters[1:]):
-            d = cluster.distance(ob)
+            d = cluster.distance_squared(ob)
             if d < dis:
                 dis = d
                 res = i + 1
@@ -76,6 +77,7 @@ class KmContext(object):
     def dump(self):
         for cluster in self.clusters:
             print(",".join(map(lambda f: str(round(f, 2)), cluster.centroid)))
+
 
 def scanner():
     while True:
