@@ -3,19 +3,35 @@ import argparse
 
 class Observation(object):
     def __init__(self, dimension):
-        self.data = None
+        self.vector = None
         self.cluster = 0
 
-    def set_data(self, data):
-        self.data = data
+    def set_vector(self, vector):
+        self.vector = vector
 
 class Cluster(object):
     def __init__(self, dimension):
         self.centroid = None
+        self.dimension = dimension
         self.cardinality = 0
 
-    def set_data(self, data):
-        self.data = data
+    def set_center(self, vector):
+        self.centroid = vector
+
+    def __eq__(self, other):
+        return self.centroid == other.centroid
+
+    def distance(self, ob):
+        vector = ob.vector
+        return sum(((self.centroid[i] - vector[i])**2 for i in range(self.dimension)))
+
+    def add(self, ob):
+        vector = ob.vector
+        self.centroid = (
+                (self.centroid[i] * self.cardinality + vector[i]) / self.cardinality + 1
+                for i in range(self.dimension)
+                )
+        self.cardinality += 1
 
 
 class KmContext(object):
@@ -28,14 +44,39 @@ class KmContext(object):
         self.clusters = [Cluster(self.dimension)] * self.num_clusters
         self.observations = [Observation(self.dimension)] * self.num_observations
 
-    def observe(self, data):
+    def observe(self, vector):
         if self.num_observed < self.num_clusters:
-            self.clusters[self.num_observed].set_data(data)
-        self.observations[self.num_observed].set_data(data)
+            self.clusters[self.num_observed].set_vector(vector)
+        self.observations[self.num_observed].set_center(vector)
+        self.num_observed += 1
+
+    def choose_cluster(self, ob):
+        res = 0
+        dis = self.clusters[res].distance(ob)
+        for i, cluster in enumerate(self.clusters[1:]):
+            d = cluster.distance(ob)
+            if d < dis:
+                dis = d
+                res = i
+        return res
 
     def converge(self):
         for _ in range(self.max_iterations):
+            next_clusters = [Cluster(self.dimension)] * self.num_clusters
             for i in range(self.num_observations):
+                curr_ob = self.observations[i]
+                curr_cluster_index = self.choose_cluster(curr_ob)
+                next_clusters[curr_cluster_index].add(curr_ob)
+            if all(lambda i: self.clusters[i] == next_clusters[i], range(self.clusters)):
+                return 1
+            else:
+                self.clusters = next_clusters
+        return 0
+
+    def dump(self):
+        for cluster in self.clusters:
+            print(",".join(map(lambda f: str(round(f, 2)), cluster.vector)))
+
                 
 def scanner():
     while True:
