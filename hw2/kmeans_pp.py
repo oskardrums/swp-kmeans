@@ -3,8 +3,9 @@
 import argparse
 import pandas as pd
 import numpy as np
+from mykmeanspp import fit
 
-def k_means_pp(df, k, n, d):
+def k_means_pp(df, k, n, d, m):
     np.random.seed(0)
 
     centroid_indices = [0 for _ in range(k)]
@@ -20,6 +21,7 @@ def k_means_pp(df, k, n, d):
         centroids[j] = df.iloc[centroid_indices[j], :]
 
     print(",".join(map(str,centroid_indices)))
+    fit(k, n, d, m, df.to_numpy().flatten().tolist(), list(map(int, centroid_indices)))
 
 
 def main():
@@ -37,8 +39,7 @@ def main():
     m = args.MAX_ITER
     df = pd.read_csv(args.filename, header=None)
 
-    print(df)
-    k_means_pp(df, k, n, d)
+    k_means_pp(df, k, n, d, m)
 
     return
 

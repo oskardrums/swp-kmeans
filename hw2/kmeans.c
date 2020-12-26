@@ -1,3 +1,6 @@
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +10,6 @@ struct km_ctx_s {
     size_t   nclusters; /* # of clusters                                       */
     size_t   nobserves; /* total # of observations                             */
     size_t   max_iters; /* MAX_ITER                                            */
-    size_t   inits_set; /* number initial mean values inserted so far          */
     size_t * ob_clusts; /* array of size N, observation index -> cluster index */
     size_t * cardinals; /* cardinalities of clusters, array of size K          */
     double * mean_vals; /* mean values, array of K * d                         */
@@ -19,9 +21,9 @@ void km_dump(struct km_ctx_s * ctx)
     size_t i, j;
     for (i = 0; i < ctx->nclusters; ++i) {
         for (j = 0; j < ctx->dimension - 1; ++j) {
-            printf("%.2f,", *(ctx->mean_vals + (ctx->dimension * i) + j));
+            printf("%.14f,", *(ctx->mean_vals + (ctx->dimension * i) + j));
         }
-        printf("%.2f\n", *(ctx->mean_vals + (ctx->dimension * i) + j));
+        printf("%.14f\n", *(ctx->mean_vals + (ctx->dimension * i) + j));
     }
 }
 
@@ -54,7 +56,6 @@ struct km_ctx_s * km_create(size_t d, size_t k, size_t n, size_t m)
     ctx->nclusters = k;
     ctx->nobserves = n;
     ctx->max_iters = m;
-    ctx->inits_set = 0;
 
     ctx->cardinals = (size_t *) malloc (ctx->nclusters * sizeof(size_t));
     if (ctx->cardinals == NULL) {
@@ -111,46 +112,22 @@ size_t km_cluster(struct km_ctx_s * ctx, double * w)
     return s;
 }
 
-void km_update(struct km_ctx_s * ctx, size_t i, double * w)
+int km_scan_input(struct km_ctx_s * ctx, PyObject * observations, PyObject * centroids)
 {
-    size_t j;
-    if (i < ctx->nclusters) {
-        for (j = 0; j < ctx->dimension; ++j) {
-            *(ctx->mean_vals + (ctx->dimension * i) + j) = w[j];
-        }
-    }
-
-    for (j = 0; j < ctx->dimension; ++j) {
-        *(ctx->data_vals + (ctx->dimension * i) + j) = w[j];
-    }
-}
-
-int km_scan_input(struct km_ctx_s * ctx)
-{
-    char c = 0;
-    double f = 0;
-    size_t i, j;
-    double * w = NULL;
-    
-    w = (double *) malloc (sizeof(double) * ctx->dimension);
-    if (w == NULL) {
-        perror("km_scan_input: malloc");
-        return -1;
-    }
+    size_t i, j, k;
 
     for (i = 0; i < ctx->nobserves; ++i) {
         for (j = 0; j < ctx->dimension; ++j) {
-            if (scanf("%lf%c", &f, &c) != 2) {
-                perror("km_scan_input: bad input");
-                return -1;
-            }
-            *(w + j) = f;
+            ctx->data_vals[(ctx->dimension * i) + j] = PyFloat_AsDouble(PyList_GetItem(observations, i * ctx->dimension + j));
         }
-        km_update(ctx, i, w);
     }
 
-    free(w);
-    w = NULL;
+    for (i = 0; i < ctx->nclusters; ++i) {
+        k = PyLong_AsUnsignedLong(PyList_GetItem(centroids, i));
+        for (j = 0; j < ctx->dimension; ++j) {
+            ctx->mean_vals[(ctx->dimension * i) + j] = ctx->data_vals[(ctx->dimension * k) + j];
+        }
+    }
 
     return 0;
 }
@@ -175,7 +152,7 @@ int km_iterate(struct km_ctx_s * ctx)
     }
     memset(new_cards, 0, sizeof(size_t) * ctx->nclusters);
 
-    /* iterate over all observavtions */
+    /* iterate over all observations */
     for (i = 0; i < ctx->nobserves; ++i) {
         /* calculate cluster index for the current observation */
         s = km_cluster(ctx, ctx->data_vals + (i * ctx->dimension));
@@ -225,44 +202,59 @@ int km_converge(struct km_ctx_s * ctx)
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+static PyObject * km_fit(PyObject *self, PyObject *args)
+{
+    (void)self;
+
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
+    PyObject * py_doubles = NULL;
+    PyObject * py_centroids = NULL;
 
-    if (argc != 5) {
-        printf("usage: %s K N d MAX_ITER < infile > outfile\n", argv[0]);
-        return 1;
+    if(!PyArg_ParseTuple(args, "IIIIOO:km_fit", &k, &n, &d, &m, &py_doubles, &py_centroids)) {
+        return NULL; 
     }
 
-    k = atoi(argv[1]);
-    n = atoi(argv[2]);
-    d = atoi(argv[3]);
-    m = atoi(argv[4]);
-
-    if (k <= 0 || n <= k || d <= 0 || m <= 0) {
-        printf("%s: bad argument\n", argv[0]);
-        return 2;
-    }
 
     ctx = km_create(d, k, n, m);
     if (ctx == NULL) {
         perror("main: km_create failed");
-        return -1;
+        return NULL;
     }
 
-    if (km_scan_input(ctx) < 0) {
+    if (km_scan_input(ctx, py_doubles, py_centroids) < 0) {
         perror("main: km_scan_input failed");
-        return -2;
+        return NULL;
     }
 
     if (km_converge(ctx) < 0) {
         perror("main: km_converge failed");
-        return -3;
+        return NULL;
     }
 
     km_dump(ctx);
 
     km_destroy(ctx);
 
-    return 0;
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef kmeanspp_methods[] = {
+    {"fit", (PyCFunction) km_fit, METH_VARARGS, ""},
+    {NULL, NULL, 0, NULL}
+};
+
+static struct PyModuleDef moduledef = {
+    PyModuleDef_HEAD_INIT,
+    "mykmeanspp", /* name of module */
+    NULL, /* module documentation, may be NULL */
+    -1,  /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    kmeanspp_methods /* the PyMethodDef array from before containing the methods of the extension */
+};
+
+
+PyMODINIT_FUNC PyInit_mykmeanspp(void)
+{
+    return PyModule_Create(&moduledef);
+
 }
