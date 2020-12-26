@@ -1,9 +1,12 @@
 #!/bin/env python3
 
 import argparse
+
 import pandas as pd
 import numpy as np
+
 from mykmeanspp import fit
+
 
 def k_means_pp(df, k, n, d, m):
     np.random.seed(0)

@@ -208,10 +208,10 @@ static PyObject * km_fit(PyObject *self, PyObject *args)
 
     size_t d = 0, k = 0, n = 0, m = 0;
     struct km_ctx_s * ctx = NULL;
-    PyObject * py_doubles = NULL;
+    PyObject * py_obervations = NULL;
     PyObject * py_centroids = NULL;
 
-    if(!PyArg_ParseTuple(args, "IIIIOO:km_fit", &k, &n, &d, &m, &py_doubles, &py_centroids)) {
+    if(!PyArg_ParseTuple(args, "IIIIOO:km_fit", &k, &n, &d, &m, &py_obervations, &py_centroids)) {
         return NULL; 
     }
 
@@ -222,7 +222,7 @@ static PyObject * km_fit(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    if (km_scan_input(ctx, py_doubles, py_centroids) < 0) {
+    if (km_scan_input(ctx, py_obervations, py_centroids) < 0) {
         perror("main: km_scan_input failed");
         return NULL;
     }
