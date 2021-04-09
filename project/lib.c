@@ -400,9 +400,33 @@ int qr_iteration(size_t n, double * a, double * q_out, double * a_out)
   return 0;
 }
 
+double * normalize_cols(size_t n, size_t d, double * m)
+{
+  double mik = 0, s = 0;
+  double * n = NULL;
+
+  if ((n = allocate_matrix(n, d)) == NULL) {
+    perror("failed to allocate normalized matrix");
+    return -1;
+  }
+  
+  for (i = 0; i < n; ++i) {
+    for (j = 0; j < d; ++j) {
+      s = 0;
+      for (k = 0; k < d; ++k) {
+	mik = m[(i * n) + k];
+	s = mik * mik;
+      }
+      n[(i * d) + j] = m[(i * n) + j] / sqrt(s);
+    }
+  }
+
+  return n;
+}
+
 int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double * x, size_t * y_out)
 {
-  double * l = NULL, * a = NULL, * q = NULL;
+  double * l = NULL, * a = NULL, * q = NULL, t = NULL;
   
   l = normalized_graph_laplacian(n, w);
   if (l == NULL) {
@@ -430,17 +454,14 @@ int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double 
     goto cleanup;
   }
 
-  if (normalize(n, k, q) != 0) {
+  if ((t = normalize_cols(n, k, q)) == NULL) {
     perror("renormalizing failed");
     goto cleanup;
   }
 
-  ... now do kmeans
+  mat_dump(n, k, t);
 
-  
-  
-  
-  
+  //  ... now do kmeans
 }
 
 static PyObject * prj_main(PyObject *self, PyObject *args)
