@@ -32,6 +32,9 @@ double vec_distance_squared(size_t d, double * v1, double * v2)
   return r;
 }
 
+/*
+ * O(num_rows)
+ */
 double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, double * mat)
 {
   double result = 0, temp = 0;
@@ -84,6 +87,7 @@ double * mat_identity(size_t n)
 
 /*
  * num_cols1 == num_rows2
+ * O(num_rows1 * num_cols2 * num_cols1)
  */
 void mat_multiply(size_t num_rows1, size_t num_cols1, double * mat1,
 		  size_t num_rows2, size_t num_cols2, double * mat2,
@@ -108,6 +112,7 @@ void mat_multiply(size_t num_rows1, size_t num_cols1, double * mat1,
 
 /*
  * num_cols >= num_out_cols
+ * O(num_rows * num_out_cols)
  */
 void mat_trim_and_normalize_cols(size_t num_rows, size_t num_cols, double * mat,
 				 size_t num_out_cols, double * mat_out)

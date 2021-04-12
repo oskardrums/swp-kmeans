@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+/*
+ * O(n^2 * d)
+ */
 double * weighted_adjacency_matrix(size_t n, size_t d, double * x)
 {
   double * w = NULL, wij = 0;
@@ -27,6 +30,9 @@ double * weighted_adjacency_matrix(size_t n, size_t d, double * x)
   return w;
 }
 
+/*
+ * O(n^2 * d)
+ */
 double * normalized_graph_laplacian(size_t n, size_t d, double * x)
 {
   double * l = NULL, *w = NULL, * d_diag = NULL;
@@ -88,12 +94,15 @@ cleanup:
   return l;
 }
 
+/*
+ * O(n^3)
+ */
 int modified_gram_schmidt(size_t n, double * a, double * q, double * r)
 {
   double rij, * u = a;
   size_t i, j, k;
   for (i = 0; i < n; i++) {
-    r[(i * n) + i] = mat_col_norm_squared(i, n, n, a);
+    r[(i * n) + i] = sqrt(mat_col_norm_squared(i, n, n, a));
     for (j = 0; j < n; j++) {
       q[(j * n) + i] = u[(j * n) + i] / r[(i * n) + i];
     }
@@ -111,6 +120,9 @@ int modified_gram_schmidt(size_t n, double * a, double * q, double * r)
   return 0;
 }
 
+/*
+ * O(n^4)
+ */
 int qr_iteration(size_t n, double * a, double * q_out, double * a_out)
 {
   double * q = NULL, * r = NULL;
@@ -138,6 +150,9 @@ int qr_iteration(size_t n, double * a, double * q_out, double * a_out)
   return 0;
 }
 
+/*
+ * O(n)
+ */
 size_t eigengap_heuristic(size_t n, double * a)
 {
   double gap = 0, max_gap = 0;
@@ -155,6 +170,9 @@ size_t eigengap_heuristic(size_t n, double * a)
   return max_ind;
 }
 
+/*
+ * O(n^4)
+ */
 int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double * x, size_t * y_out)
 {
   double * l = NULL, * a = NULL, * q = NULL, * t = NULL;
@@ -224,7 +242,12 @@ int main()
      3, 5,
      4, 6,
      5, 7,
+     3, 1,
+     4, 2,
+     5, 3,
+     6, 4,
+     7, 5,
     };
 
-  return normalized_spectral_clustering(10, 2, NULL, data, NULL);
+  return normalized_spectral_clustering(15, 2, NULL, data, NULL);
 }
