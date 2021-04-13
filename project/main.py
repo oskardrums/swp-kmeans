@@ -1,28 +1,12 @@
 import argparse
 from sklearn.datasets import make_blobs
 import random
+import struct
 
-from main_lib import doit
+from prj_lib import prj_main
 
 def generate_data(k, n, d):
     return make_blobs(n_samples=n, n_features=d, centers=k)
-
-def random_k():
-    # TODO - eigengap heuristic
-    return random.randint(5,10)
-
-def random_n():
-    return random.randint(50,100)
-
-def normalized_spectral_clustering(k, x):
-    w = weighted_adjacency_matrix(x)
-    l = normalized_graph_laplacian(w)
-    k = k or eigengap_heuristic(l)
-    u = trim_columns(k, l)
-    t = renormalize(u)
-    return k, kmeans(k, t)
-
-def kmeans(k, x)
     
 def main():
     parser = argparse.ArgumentParser()
@@ -43,12 +27,13 @@ def main():
         n = random_n()
 
     data, clusters = generate_data(k, n, d)
-    doit(k, n, d, m, data, clusters)
-    k, nsc_clusters = normalized_spectral_clustering(k, data)
+    print(data)
     
-    kmeans_clusters = kmeans(k, data)    
+    binary_labels = prj_main(k, n, d, m, data.tobytes(), clusters.tobytes())
 
-    print(data, nsc_clusters, kmeans_clusters)
+    labels = zip(*struct.iter_unpack("Q", binary_labels)).__next__()
 
+    print(labels)
+    
 if __name__ == "__main__":
     main()
