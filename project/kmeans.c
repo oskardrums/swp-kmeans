@@ -200,13 +200,9 @@ size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, double * ma
 {
   double * initial_centroids = NULL;
 
-  mat_dump(num_rows, num_cols, mat);
-
   if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
     return NULL;
   }
-
-  mat_dump(num_clusters, num_cols, initial_centroids);
 
   return kmpp_converge(initial_centroids, num_clusters, num_rows, num_cols, mat, max_iters);
 }

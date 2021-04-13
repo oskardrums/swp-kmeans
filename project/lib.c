@@ -1,7 +1,9 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "kmpp.h"
+#include "log.h"
 #include "mat.h"
+#include "nsc.h"
 
 int prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data)
 {
@@ -22,15 +24,18 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 
     size_t d = 0, k = 0, n = 0, m = 0;
     PyObject * py_data = NULL;
-    PyObject * py_labels = NULL;
     PyObject * py_labels_tuple = NULL;
     double * data = NULL;
     size_t * kmpp_labels = NULL;
     size_t * nsc_labels = NULL;
 
     if(!PyArg_ParseTuple(args, "IIIIO:prj_main", &k, &n, &d, &m, &py_data)) {
-        return NULL; 
+	return NULL;
     }
+
+    log_init();
+
+    log_emit("starting");
 
     if ((data = mat_allocate(n, d)) == NULL)
       {
@@ -42,9 +47,20 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 	perror("prj_main: failed to scan input data");
 	return NULL;
       }
+    if ((nsc_labels = (size_t *) malloc (sizeof(size_t) * n)) == NULL) {
+      return NULL;
+    }
+    memset(nsc_labels, 0, sizeof(size_t) * n);
 
-    nsc_labels = nsc(k, n, d, data, 300);
+    log_emit("running nsc");
+
+    k = normalized_spectral_clustering(k, n, d, data, 300, &nsc_labels);
+
+    log_emit("running kmpp");
+
     kmpp_labels = kmpp(k, n, d, data, 300);
+
+    log_emit("returning labels");
 
     py_labels_tuple = PyTuple_New(2);
     PyTuple_SET_ITEM(py_labels_tuple, 0,
@@ -52,6 +68,7 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
     PyTuple_SET_ITEM(py_labels_tuple, 1,
 		     PyByteArray_FromStringAndSize((const char *)nsc_labels, sizeof(size_t) * n));
       //    Py_RETURN_NONE;
+    return py_labels_tuple;
 }
 
 static PyMethodDef prj_methods[] = {

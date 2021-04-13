@@ -1,4 +1,6 @@
 #include "mat.h"
+#include "log.h"
+#include "kmpp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -173,12 +175,11 @@ size_t eigengap_heuristic(size_t n, double * a)
 /*
  * O(n^4)
  */
-int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double * x, size_t * y_out)
+size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, double * x, size_t m, size_t ** y_out)
 {
   double * l = NULL, * a = NULL, * q = NULL, * t = NULL;
-  size_t k = 0;
-  (void)k_inout;
-  (void)y_out;
+
+  log_emit("running normalized_graph_laplacian");
 
   l = normalized_graph_laplacian(n, d, x);
   if (l == NULL) {
@@ -196,6 +197,8 @@ int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double 
     goto cleanup;
   }
 
+  log_emit("running qr_iteration");
+
   if (qr_iteration(n, l, q, a) != 0) {
     perror("QR iteration failed");
     goto cleanup;
@@ -203,9 +206,12 @@ int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double 
 
   free(l);
 
-  if ((k = eigengap_heuristic(n, a)) == 0) {
-    perror("eigengap heuristic failed");
-    goto cleanup;
+  if (k == 0) {
+    log_emit("running eigengap_heuristic");
+    if ((k = eigengap_heuristic(n, a)) == 0) {
+      perror("eigengap heuristic failed");
+      goto cleanup;
+    }
   }
 
   free(a);
@@ -215,39 +221,18 @@ int normalized_spectral_clustering(size_t n, size_t d, size_t * k_inout, double 
     goto cleanup;
   }
 
+  log_emit("running mat_trim_and_normalize_cols");
+
   mat_trim_and_normalize_cols(n, n, q, k, t);
 
   free(q);
 
-  mat_dump(n, k, t);
+  log_emit("running kmpp");
+
+  *y_out = kmpp(k, n, k, t, m);
 
   free(t);
 
 cleanup:
-  return 0;
-  //  ... now do kmeans
-}
-
-int main()
-{
-  double data[] =
-    {
-     1, 2,
-     3, 4,
-     5, 6,
-     7, 8,
-     9, 0,
-     1, 3,
-     2, 4,
-     3, 5,
-     4, 6,
-     5, 7,
-     3, 1,
-     4, 2,
-     5, 3,
-     6, 4,
-     7, 5,
-    };
-
-  return normalized_spectral_clustering(15, 2, NULL, data, NULL);
+  return k;
 }

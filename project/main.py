@@ -27,13 +27,14 @@ def main():
         n = random_n()
 
     data, clusters = generate_data(k, n, d)
-    print(data)
     
-    binary_labels = prj_main(k, n, d, m, data.tobytes(), clusters.tobytes())
+    binary_kmpp_labels, binary_nsc_labels = prj_main(k, n, d, m, data.flatten().tolist())
 
-    labels = zip(*struct.iter_unpack("Q", binary_labels)).__next__()
+    kmpp_labels = zip(*struct.iter_unpack("Q", binary_kmpp_labels)).__next__()
+    nsc_labels = zip(*struct.iter_unpack("Q", binary_nsc_labels)).__next__()
 
-    print(labels)
+    print(kmpp_labels)
+    print(nsc_labels)
     
 if __name__ == "__main__":
     main()
