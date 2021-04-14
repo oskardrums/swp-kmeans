@@ -1,4 +1,5 @@
 #include "kmpp.h"
+#include "log.h"
 #include "mat.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -6,7 +7,7 @@
 #include <string.h>
 #include <sys/random.h>
 
-size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_cols, double * w)
+size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_cols, const double * w)
 {
     size_t i, s = 0;
     double last, curr = 0;
@@ -22,7 +23,7 @@ size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_cols, do
     return s;
 }
 
-size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t num_rows, size_t num_cols, double * mat, size_t max_iters)
+size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
 {
   bool err = false;
   size_t iter, i, j;
@@ -116,7 +117,7 @@ double kmpp_random_double(double r)
   return result;
 }
 
-double kmpp_min_dist_squared(double * centroids, size_t num_centroids, double * vec, size_t num_cols)
+double kmpp_min_dist_squared(const double * centroids, size_t num_centroids, const double * vec, size_t num_cols)
 {
   double min_dist_squared = 0, cur_dist_squared = 0;
   size_t z = 0;
@@ -142,6 +143,7 @@ size_t kmpp_binary_search(size_t n, double * cdf, double r)
   size_t i = 0, head = 0, tail = n;
   while (head < tail) {
     i = kmpp_half(head + tail);
+    //    printf("head=%lu, tail=%lu, i=%lu, cdf[i]=%f, cdf[i-1]=%f, r=%f\n", head, tail, i, cdf[i], cdf[i-1], r);
     if (cdf[i] >= r) {
       if (cdf[i - 1] < r) {
 	break;
@@ -158,13 +160,15 @@ size_t kmpp_binary_search(size_t n, double * cdf, double r)
 size_t kmpp_random_size_t_with_cdf(size_t n, double * cdf)
 {
   double random_double = 0;
-
+  printf("%f\n", cdf[n-1]);
   random_double = kmpp_random_double(cdf[n - 1]);
+  printf("%f\n", random_double);
 
+  log_emit("running kmpp_binary_search");
   return kmpp_binary_search(n, cdf, random_double);
 }
 
-double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, size_t num_cols, double * mat)
+double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat)
 {
   double * cdf = NULL, * centroids = NULL;
   size_t j, i, k = 0;
@@ -182,12 +186,15 @@ double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, size_t num
   memcpy(&centroids[(0 * num_cols)], &(mat[(kmpp_random_size_t(num_rows) * num_cols)]), sizeof(double) * num_cols);
 
   for (j = 1; j < num_clusters; ++j) {
+    log_emit("got centroid");
     cdf[0] = kmpp_min_dist_squared(centroids, j, mat, num_cols);
+    log_emit("got cdf val");
     for (i = 1; i < num_rows; ++i) {
       cdf[i] = cdf[i - 1] + kmpp_min_dist_squared(centroids, j, &(mat[(i * num_cols)]), num_cols);
     }
-
+    log_emit("running kmpp_random_size_t_with_cdf");
     k = kmpp_random_size_t_with_cdf(num_rows, cdf);
+    log_emit("running memcpy");
     memcpy(&centroids[(j * num_cols)], &(mat[k * num_cols]), sizeof(double) * num_cols);
   }
 
@@ -196,14 +203,16 @@ double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, size_t num
   return centroids;
 }
 
-size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, double * mat, size_t max_iters)
+size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
 {
   double * initial_centroids = NULL;
 
+  log_emit("calculating initial centroids");
   if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
     return NULL;
   }
-
+  
+  log_emit("running kmpp_converge");
   return kmpp_converge(initial_centroids, num_clusters, num_rows, num_cols, mat, max_iters);
 }
 
