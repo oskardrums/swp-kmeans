@@ -4,6 +4,7 @@
 #include "log.h"
 #include "mat.h"
 #include "nsc.h"
+#include "jaccard.h"
 
 int prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data)
 {
@@ -64,7 +65,11 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 
     kmpp_labels = kmpp(k, n, d, data, 300);
 
+    printf("jaccard=%f\n", jaccard_measure(n, kmpp_labels, nsc_labels));
+
     log_emit("returning labels");
+
+    // XXX -- Free all allocated stuff
 
     py_labels_tuple = PyTuple_New(2);
     PyTuple_SET_ITEM(py_labels_tuple, 0,
