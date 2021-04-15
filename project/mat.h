@@ -6,7 +6,7 @@
 
 void mat_dump(size_t num_rows, size_t num_cols, const double * mat);
 
-double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, double * mat);
+double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, const double * mat);
 
 double vec_distance_squared(size_t, const double *, const double *);
 
@@ -28,6 +28,8 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
 
 void mat_normalize_rows(size_t num_rows, size_t num_cols, double * mat);
 
-bool mat_abs_equals(size_t num_rows, size_t num_cols, double * mat1, double * mat2);
+bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2);
+
+bool mat_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2);
 
 #endif /* __MAT_H */

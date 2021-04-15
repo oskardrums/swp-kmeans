@@ -37,7 +37,7 @@ double vec_distance_squared(size_t d, const double * v1, const double * v2)
 /*
  * O(num_rows)
  */
-double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, double * mat)
+double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, const double * mat)
 {
   double result = 0, temp = 0;
   size_t row;
@@ -186,7 +186,7 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
   return mat_out;
 }
 
-bool mat_abs_equals(size_t num_rows, size_t num_cols, double * mat1, double * mat2)
+bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
 {
   size_t i, j;
   double delta = 0, mat1ij = 0, mat2ij = 0;
@@ -195,7 +195,7 @@ bool mat_abs_equals(size_t num_rows, size_t num_cols, double * mat1, double * ma
     for (j = 0; j < num_cols; ++j) {
       mat1ij = mat1[(i * num_cols) + j];
       mat2ij = mat2[(i * num_cols) + j];
-      delta = fabs(mat1ij) - fabs(mat2ij);
+      delta = fabs(fabs(mat1ij) - fabs(mat2ij));
 
 #define EPSILON 0.0001
       if (delta > EPSILON) {
@@ -206,4 +206,24 @@ bool mat_abs_equals(size_t num_rows, size_t num_cols, double * mat1, double * ma
 
   return true;
 
+}
+
+bool mat_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
+{
+  size_t i, j;
+  double delta = 0, mat1ij = 0, mat2ij = 0;
+
+  for (i = 0; i < num_rows; ++i) {
+    for (j = 0; j < num_cols; ++j) {
+      mat1ij = mat1[(i * num_cols) + j];
+      mat2ij = mat2[(i * num_cols) + j];
+      delta = fabs(mat1ij - mat2ij);
+
+      if (delta > EPSILON) {
+	return false;
+      }
+    }
+  }
+
+  return true;
 }

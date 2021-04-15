@@ -265,7 +265,7 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
 
   log_emit("running normalized_graph_laplacian");
   log_emit("x");
-  mat_dump(n, d, x);
+  //  mat_dump(n, d, x);
 
   l = normalized_graph_laplacian(n, d, x);
   if (l == NULL) {
@@ -275,7 +275,7 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   }
 
   log_emit("l");
-  mat_dump(n, n, l);
+  //  mat_dump(n, n, l);
 
   log_emit("running qr_iteration");
   if ((q = qr_iteration(n, l)) == NULL) {
@@ -284,9 +284,9 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
     goto cleanup;
   }
   log_emit("q");
-  mat_dump(n, n, q);
+  //  mat_dump(n, n, q);
   log_emit("a");
-  mat_dump(n, n, l);
+  //  mat_dump(n, n, l);
 
   sorted_eigenvalues = nsc_sort_eigenvalues(n, l);
 
@@ -306,13 +306,13 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   }
 
   log_emit("t");
-  mat_dump(n, k, t);
+  //  mat_dump(n, k, t);
 
   log_emit("running mat_normalize_rows");
   mat_normalize_rows(n, k, t);
 
   log_emit("normalized t");
-  mat_dump(n, k, t);
+  //  mat_dump(n, k, t);
 
   log_emit("running kmpp");
   *y_out = kmpp(k, n, k, t, m);

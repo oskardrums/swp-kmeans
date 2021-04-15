@@ -73,7 +73,7 @@ size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t num_rows,
       }
     }
 
-    if (memcmp(centroids, new_centroids, sizeof(double) * num_clusters * num_cols) == 0) {
+    if (mat_equals(num_clusters, num_cols, centroids, new_centroids)) {
       break;
     }
   }
@@ -211,7 +211,7 @@ size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, const doubl
   if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
     return NULL;
   }
-  
+
   log_emit("running kmpp_converge");
   return kmpp_converge(initial_centroids, num_clusters, num_rows, num_cols, mat, max_iters);
 }
