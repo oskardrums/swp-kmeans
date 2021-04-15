@@ -54,8 +54,6 @@ double * vec_allocate(size_t d)
 {
   double * result = NULL;
 
-  printf("allocating %lu doubles\n", d);
-
   if ((result = (double *) malloc (sizeof(double) * d)) == NULL)
     {
       perror("out of memory");
@@ -176,9 +174,7 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
 
   for (i = 0; i < num_out_cols; ++i) {
     col = indices[i];
-    printf("copying col=%lu\n", col);
     for (row = 0; row < num_rows; ++row) {
-      printf("row=%lu\n", row);
       mat_out[(row * num_out_cols) + i] = mat[(row * num_cols) + col];
     }
   }

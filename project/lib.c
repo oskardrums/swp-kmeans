@@ -6,7 +6,7 @@
 #include "nsc.h"
 #include "jaccard.h"
 
-int prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data)
+int prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data, PyObject * py_labels, size_t * labels)
 {
   size_t i, j;
 
@@ -14,6 +14,7 @@ int prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data)
     for (j = 0; j < d; ++j) {
       data[(d * i) + j] = PyFloat_AsDouble(PyList_GetItem(py_data, (i * d) + j));
     }
+    labels[i] = PyLong_AsSize_t(PyList_GetItem(py_labels, i));
   }
 
   return 0;
@@ -25,12 +26,14 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 
     size_t d = 0, k = 0, n = 0, m = 0;
     PyObject * py_data = NULL;
+    PyObject * py_labels = NULL;
     PyObject * py_labels_tuple = NULL;
     double * data = NULL;
+    size_t * orig_labels = NULL;
     size_t * kmpp_labels = NULL;
     size_t * nsc_labels = NULL;
 
-    if(!PyArg_ParseTuple(args, "IIIIO:prj_main", &k, &n, &d, &m, &py_data)) {
+    if(!PyArg_ParseTuple(args, "IIIIOO:prj_main", &k, &n, &d, &m, &py_data, &py_labels)) {
 	return NULL;
     }
 
@@ -43,7 +46,13 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 	return NULL;
       }
 
-    if (prj_scan_input(n, d, py_data, data) < 0)
+    orig_labels = (size_t *) malloc (sizeof(size_t) * n);
+    if (orig_labels == NULL) {
+      return NULL;
+    }
+    memset(orig_labels, 0, sizeof(size_t) * n);
+
+    if (prj_scan_input(n, d, py_data, data, py_labels, orig_labels) < 0)
       {
 	perror("prj_main: failed to scan input data");
 	return NULL;
@@ -66,6 +75,8 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
     kmpp_labels = kmpp(k, n, d, data, 300);
 
     printf("jaccard=%f\n", jaccard_measure(n, kmpp_labels, nsc_labels));
+    printf("jaccard=%f\n", jaccard_measure(n, kmpp_labels, orig_labels));
+    printf("jaccard=%f\n", jaccard_measure(n, nsc_labels, orig_labels));
 
     log_emit("returning labels");
 

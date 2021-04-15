@@ -37,13 +37,14 @@ def main():
     else:
         data, clusters = generate_data(k, n, d)
     
-    binary_kmpp_labels, binary_nsc_labels = prj_main(k, n, d, m, data.flatten().tolist())
+    binary_kmpp_labels, binary_nsc_labels = prj_main(k, n, d, m, data.flatten().tolist(), clusters.flatten().tolist())
 
-    kmpp_labels = zip(*struct.iter_unpack("Q", binary_kmpp_labels)).__next__()
-    nsc_labels = zip(*struct.iter_unpack("Q", binary_nsc_labels)).__next__()
+    kmpp_labels = list(zip(*struct.iter_unpack("Q", binary_kmpp_labels)).__next__())
+    nsc_labels = list(zip(*struct.iter_unpack("Q", binary_nsc_labels)).__next__())
 
-    print(kmpp_labels)
-    print(nsc_labels)
+    print(kmpp_labels[:16])
+    print(nsc_labels[:16])
+    print(list(clusters)[:16])
     
 if __name__ == "__main__":
     main()

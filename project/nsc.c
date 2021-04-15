@@ -101,21 +101,31 @@ cleanup:
  */
 void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
 {
-  double rij;
-  size_t i, j, k;
-  for (i = 0; i < n; i++) {
-    r[(i * n) + i] = sqrt(mat_col_norm_squared(i, n, n, u));
-    for (j = 0; j < n; j++) {
-      q[(j * n) + i] = u[(j * n) + i] / r[(i * n) + i];
-    }
-    for (j = i + 1; j < n; j++) {
-      rij = 0;
-      for (k = 0; k < n; k++) {
-	rij += q[(i * n) + k] * u[(k * n) + j];
+  double rij, l2norm = 0;
+  size_t col, row, col2;
+  for (col = 0; col < n; ++col) {
+    l2norm = mat_col_norm_squared(col, n, n, u);
+
+    if (l2norm > 0) {
+      l2norm = sqrt(l2norm);
+
+      for (row = 0; row < n; ++row) {
+	q[(row * n) + col] = u[(row * n) + col] / l2norm;
       }
-      r[(i * n) + j] = rij;
-      for (k = 0; k < n; k++) {
-	u[(k * n) + j] = u[(k * n) + j] - (rij * q[(k * n) + i]);
+    }
+
+    r[(col * n) + col] = l2norm;
+
+    for (col2 = col + 1; col2 < n; ++col2) {
+      rij = 0;
+      for (row = 0; row < n; ++row) {
+	rij += q[(row * n) + col] * u[(row * n) + col2];
+      }
+
+      r[(col * n) + col2] = rij;
+
+      for (row = 0; row < n; ++row) {
+	u[(row * n) + col2] -= (rij * q[(row * n) + col]);
       }
     }
   }
@@ -126,11 +136,11 @@ void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
  */
 double * qr_iteration(size_t n, double * a_out)
 {
-  bool err = false, converged = true;
+  bool err = false, converged = false;
   double * q = NULL, * q_out = NULL, * q_out_times_q = NULL;
   double * r = NULL;
   double * temp = NULL;
-  size_t i;
+  size_t i = 0;
 
   if ((q_out = mat_identity(n)) == NULL) {
     err = true;
@@ -153,12 +163,17 @@ double * qr_iteration(size_t n, double * a_out)
   }
 
   for (i = 0; i < n; i++) {
-    log_emit("running modified_gram_schmidt");
+    printf("i=%lu\n", i);
+    log_emit("Q, R = Modified-Gram-Schmidt(A')");
     modified_gram_schmidt(n, a_out, q, r);
+
+    log_emit("A' = RQ");
     mat_multiply(n, n, r, n, n, q, a_out);
 
+    log_emit("calc QQ'");
     mat_multiply(n, n, q_out, n, n, q, q_out_times_q);
 
+    log_emit("test Q' == QQ'");
     if (mat_abs_equals(n, n, q_out, q_out_times_q)) {
       log_emit("converged");
       converged = true;
@@ -264,7 +279,6 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   size_t * sorted_eigenvalues = NULL;
 
   log_emit("running normalized_graph_laplacian");
-  log_emit("x");
   //  mat_dump(n, d, x);
 
   l = normalized_graph_laplacian(n, d, x);
@@ -274,7 +288,6 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
     goto cleanup;
   }
 
-  log_emit("l");
   //  mat_dump(n, n, l);
 
   log_emit("running qr_iteration");
@@ -283,9 +296,7 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
     perror("QR iteration failed");
     goto cleanup;
   }
-  log_emit("q");
   //  mat_dump(n, n, q);
-  log_emit("a");
   //  mat_dump(n, n, l);
 
   sorted_eigenvalues = nsc_sort_eigenvalues(n, l);
@@ -305,13 +316,11 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
     goto cleanup;
   }
 
-  log_emit("t");
   //  mat_dump(n, k, t);
 
   log_emit("running mat_normalize_rows");
   mat_normalize_rows(n, k, t);
 
-  log_emit("normalized t");
   //  mat_dump(n, k, t);
 
   log_emit("running kmpp");
@@ -322,13 +331,9 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   }
 
 cleanup:
-    log_emit("running kmpp");
   free(t);
-    log_emit("running kmpp");
   free(q);
-    log_emit("running kmpp");
   free(l);
-    log_emit("running kmpp");
   free(sorted_eigenvalues);
 
   if (err) {
