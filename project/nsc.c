@@ -199,7 +199,7 @@ size_t eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const double * 
     j = sorted_eigenvalues[i];
     j_prev = sorted_eigenvalues[i - 1];
 
-    gap = a[((j_prev) * n) + (j_prev)] - a[(j * n) + j];
+    gap = a[(j * n) + j] - a[((j_prev) * n) + (j_prev)];
 
     if (gap > max_gap) {
       max_gap = gap;

@@ -55,6 +55,10 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
     log_emit("running nsc");
 
     k = normalized_spectral_clustering(k, n, d, data, 300, &nsc_labels);
+    if (k == 0) {
+      perror("prj_main: normalized_spectral_clustering failed");
+      return NULL;
+    }
 
     log_emit("running kmpp");
 

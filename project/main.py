@@ -7,7 +7,15 @@ from prj_lib import prj_main
 
 def generate_data(k, n, d):
     return make_blobs(n_samples=n, n_features=d, centers=k)
-    
+
+def random_n():
+    n = 1<<7
+    return random.randint(int(n / 2), n)
+
+def random_k(n):
+    k = min(n, 1<<4)
+    return random.randint(int(k / 2), k)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-k", help="number of clusters", type=int, required=True)
@@ -23,10 +31,11 @@ def main():
     m = 300
 
     if r:
-        k = random_k()
+        k = 0
         n = random_n()
-
-    data, clusters = generate_data(k, n, d)
+        data, clusters = generate_data(random_k(n), n, d)
+    else:
+        data, clusters = generate_data(k, n, d)
     
     binary_kmpp_labels, binary_nsc_labels = prj_main(k, n, d, m, data.flatten().tolist())
 
