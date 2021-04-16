@@ -7,15 +7,14 @@ import random
 import struct
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 
-from clustering import nsc_and_kmpp
+from clustering import nsc, kmpp
 
 KMPP_MAX_ITER = 300
 
 # Estimates of Maximum Capacity within 5 minutes
 MAX_N = 550
-MAX_K = 128
+MAX_K = 32
 
 
 def generate_data(k, n, d):
@@ -54,10 +53,27 @@ def output_clusters_pdf(data, n, d, nsc_labels, nsc_jaccard, kmpp_labels, kmpp_j
         add_2d_subplot(fig, 1, "Normalized Spectral Clustering", data, nsc_labels, nsc_jaccard)
         add_2d_subplot(fig, 2, "K-means++", data, kmpp_labels, kmpp_jaccard)
 
+    else:
+        return
+
     plt.figtext(0.5, 0.01, desc, wrap=True, horizontalalignment='center', fontsize=12)
 
     fig.set_size_inches(7, 8, forward=True)
     plt.savefig("clusters.pdf")
+
+
+def write_labels(n, k, labels, f):
+    """
+    Writes clusters labels to file f
+    """
+    cluster_members = {cluster : [] for cluster in range(k)}
+    
+    for i in range(n):
+        cluster_members[labels[i]].append(i)
+        
+    for cluster in range(k):
+        f.write(b", ".join(map(lambda x: str(x).encode(), cluster_members[cluster])))
+        f.write(b"\n")
 
 
 def add_2d_subplot(fig, index, title, data, labels, jaccard):
@@ -91,78 +107,115 @@ def add_3d_subplot(fig, index, title, data, labels, jaccard):
     ax.set_ylabel('Y')
 
 
-def valid_parameters(k, n, r):
+def valid_parameters(k, n):
+    """
+    Validates input parameters
+    """
     return 0 < k < n
 
+def normalized_spectral_clustering(samples, labels, k=0):
+    """
+    Takes an array of n d-dimensional observations and
+    returns 3-tuple where the 1st elemenet the number of 
+    calculated clusters, the 2nd elemenet is an array of n
+    labels such that the i'th label is the number of the cluster 
+    matched to the i'th observation, and the 3nd elemenet is the 
+    Jaccard Measure of the given labels and the calculated labels.
+
+    Hence, labels is an array of labels considered the source of truth for
+    the given samples, and is used to assess the accuracy of the calculated
+    labels.
+
+    The parameter k is the number of clusters to create.
+    If k is 0, the Eigengap Heuristic is used to determine a viable candidate.
+    """
+    n, d = samples.shape
+    k, binary_labels, jaccard_measure =  nsc(k, n, d, 300,
+                                             samples.flatten().tolist(),
+                                             labels.flatten().tolist())
+    calculated_labels = np.array(zip(*struct.iter_unpack("Q", binary_labels)).__next__())
+    
+    return k, calculated_labels, jaccard_measure
+
+
+def k_means_pp(samples, labels, k):
+    """
+    Takes an array of n d-dimensional observations and
+    returns 2-tuple where the 1st elemenet is an array of n
+    labels such that the i'th label is the number of the cluster 
+    matched to the i'th observation, and the 2nd elemenet is the 
+    Jaccard Measure of the given labels and the calculated labels.
+
+    Hence, labels is an array of labels considered the source of truth for
+    the given samples, and is used to assess the accuracy of the calculated
+    labels.
+
+    The parameter k is the number of clusters to create.
+    """
+    n, d = samples.shape
+    binary_labels, jaccard_measure =  kmpp(k, n, d, 300,
+                                           samples.flatten().tolist(),
+                                           labels.flatten().tolist())
+    calculated_labels = np.array(zip(*struct.iter_unpack("Q", binary_labels)).__next__())
+    
+    return calculated_labels, jaccard_measure
+    
+
 def main():
-    start_time = time.time()
-
     parser = argparse.ArgumentParser(
-        description="""Clustering Algorithms Comparison
-This program generates random data based on the given parameters and clusters the data
-with both K-means++ algorithm and Normalized Spectral Clustering
+        description="""
+        Clustering Algorithms Comparison
+        This program generates random data based on the given parameters and clusters the data
+        with both K-means++ algorithm and Normalized Spectral Clustering
 
-For completion within 5 minutes, the Maximum Recommended Capacity of this program is
-n = 512, k = 128.
-"""
+        For completion within 5 minutes, the Maximum Recommended Capacity of this program is
+        n = 512, k = 128.
+        """
     )
-    parser.add_argument("-k", help="number of clusters", type=int, required=True)
-    parser.add_argument("-n", help="number of data points", type=int, required=True)
-    parser.add_argument("--Random", help="randomize parameters", action="store_true")
+    parser.add_argument("-k", help="number of clusters", type=int)
+    parser.add_argument("-n", help="number of data points", type=int)
+    parser.add_argument("-d", help="dimension of data points", type=int)
+    parser.add_argument("-m", help="maximum number of iterations to perform for kmeans", type=int)
+    parser.add_argument("-r", help="randomize parameters", action="store_true")
 
     args = parser.parse_args()
 
-    initial_k = k = args.k
-    n = args.n
-    r = args.Random
-    d = random.choice([2,3])
-    m = KMPP_MAX_ITER
+    initial_k = k = args.k or 0
+    n = args.n or 0
+    r = args.r or False
+    d = args.d or random.choice([2,3])
+    m = args.m or KMPP_MAX_ITER
 
     if r:
         n = random_n()
         initial_k = random_k(n)
         k = 0
 
-    if not valid_parameters(initial_k, n, r):
+    if not valid_parameters(initial_k, n):
         print("invalid parameters")
+        parser.parse_args(["-h"])
         return
 
     print(f"Generating data with paramters n={n}, k={initial_k}, d={d}")
     data, clusters = generate_data(initial_k, n, d)
 
     print(f"Writing data to ./data.txt")
-    with open("./data.txt", "w") as f:
+    with open("./data.txt", "wb") as f:
         for i in range(n):
-            f.write(", ".join(list(map(lambda d : "%.8f" % d, data[i, :])) + [str(clusters[i])]))
-            f.write("\n")
+            f.write(b", ".join(list(map(lambda d : b"%.8f" % d, data[i, :])) + [str(clusters[i]).encode()]))
+            f.write(b"\n")
 
-    print(f"Clustering data with Normalized Spectral Clustering and K-means++")
-    (k,
-     binary_kmpp_labels, kmpp_jaccard,
-     binary_nsc_labels, nsc_jaccard) = nsc_and_kmpp(k, n, d, m,
-                                                    data.flatten().tolist(),
-                                                    clusters.flatten().tolist())
-    kmpp_labels = np.array(zip(*struct.iter_unpack("Q", binary_kmpp_labels)).__next__())
-    nsc_labels = np.array(zip(*struct.iter_unpack("Q", binary_nsc_labels)).__next__())
-    print("Done in %.3f seconds" % (time.time() - start_time))
-
+    print(f"Clustering data with Normalized Spectral Clustering")
+    k, nsc_labels, nsc_jaccard = normalized_spectral_clustering(data, clusters, k)
+    
+    print(f"Clustering data with K-means++")
+    kmpp_labels, kmpp_jaccard = k_means_pp(data, clusters, k)
+    
     print(f"Writing calculated clusters to ./clusters.txt")
-    with open("./clusters.txt", "w") as f:
-        f.write(f"{k}\n")
-
-        cluster_members = {cluster : [] for cluster in range(k)}
-        for i in range(n):
-            cluster_members[nsc_labels[i]].append(i)
-        for cluster in range(k):
-            f.write(", ".join(map(str, cluster_members[cluster])))
-            f.write("\n")
-
-        cluster_members = {cluster : [] for cluster in range(k)}
-        for i in range(n):
-            cluster_members[kmpp_labels[i]].append(i)
-        for cluster in range(k):
-            f.write(", ".join(map(str, cluster_members[cluster])))
-            f.write("\n")
+    with open("./clusters.txt", "wb") as f:
+        f.write(b"%u\n" % k)
+        write_labels(n, k, nsc_labels, f)
+        write_labels(n, k, kmpp_labels, f)
 
     desc = f"""
     Clustered data was generated with parameters n={n}, k={initial_k}, d={d}

@@ -1,5 +1,6 @@
 #include "kmpp.h"
 #include "mat.h"
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -100,7 +101,7 @@ size_t kmpp_random_size_t(size_t n)
 {
   size_t result = 0;
 
-  getrandom(&result, sizeof(result), 0);
+  while (getrandom(&result, sizeof(result), 0) < 0 && errno == EINTR);
 
   return result % n;
 }
@@ -110,7 +111,8 @@ double kmpp_random_double(double r)
   uint64_t temp = 0;
   double result = 0;
 
-  getrandom(&temp, sizeof(uint32_t), 0);
+  while (getrandom(&result, sizeof(result), 0) < 0 && errno == EINTR);
+
   result = r * ((double)temp/((1l << 32) - 1));
 
   return result;
