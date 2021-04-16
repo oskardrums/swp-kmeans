@@ -1,5 +1,4 @@
 #include "kmpp.h"
-#include "log.h"
 #include "mat.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -201,12 +200,10 @@ size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, const doubl
 {
   double * initial_centroids = NULL;
 
-  log_emit("calculating initial centroids");
   if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
     return NULL;
   }
 
-  log_emit("running kmpp_converge");
   return kmpp_converge(initial_centroids, num_clusters, num_rows, num_cols, mat, max_iters);
 }
 

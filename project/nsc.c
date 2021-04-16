@@ -1,5 +1,4 @@
 #include "mat.h"
-#include "log.h"
 #include "kmpp.h"
 #include <math.h>
 #include <stdio.h>
@@ -163,19 +162,13 @@ double * qr_iteration(size_t n, double * a_out)
   }
 
   for (i = 0; i < n; i++) {
-    printf("i=%lu\n", i);
-    log_emit("Q, R = Modified-Gram-Schmidt(A')");
     modified_gram_schmidt(n, a_out, q, r);
 
-    log_emit("A' = RQ");
     mat_multiply(n, n, r, n, n, q, a_out);
 
-    log_emit("calc QQ'");
     mat_multiply(n, n, q_out, n, n, q, q_out_times_q);
 
-    log_emit("test Q' == QQ'");
     if (mat_abs_equals(n, n, q_out, q_out_times_q)) {
-      log_emit("converged");
       converged = true;
     }
 
@@ -278,52 +271,34 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   double * l = NULL, * q = NULL, * t = NULL;
   size_t * sorted_eigenvalues = NULL;
 
-  log_emit("running normalized_graph_laplacian");
-  //  mat_dump(n, d, x);
-
   l = normalized_graph_laplacian(n, d, x);
   if (l == NULL) {
     err = true;
-    perror("failed to create normalized graph laplacian");
     goto cleanup;
   }
 
-  //  mat_dump(n, n, l);
 
-  log_emit("running qr_iteration");
   if ((q = qr_iteration(n, l)) == NULL) {
     err = true;
-    perror("QR iteration failed");
     goto cleanup;
   }
-  //  mat_dump(n, n, q);
-  //  mat_dump(n, n, l);
 
   sorted_eigenvalues = nsc_sort_eigenvalues(n, l);
 
   if (k == 0) {
-    log_emit("running eigengap_heuristic");
     if ((k = eigengap_heuristic(n, sorted_eigenvalues, l)) == 0) {
       err = true;
-      perror("eigengap heuristic failed");
       goto cleanup;
     }
   }
 
-  log_emit("running mat_copy_cols");
   if ((t = mat_copy_cols(n, n, q, k, sorted_eigenvalues)) == NULL) {
     err = true;
     goto cleanup;
   }
 
-  //  mat_dump(n, k, t);
-
-  log_emit("running mat_normalize_rows");
   mat_normalize_rows(n, k, t);
 
-  //  mat_dump(n, k, t);
-
-  log_emit("running kmpp");
   *y_out = kmpp(k, n, k, t, m);
   if (*y_out == NULL) {
     err = true;
