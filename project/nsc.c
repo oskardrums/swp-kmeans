@@ -1,3 +1,7 @@
+/*
+ * Normalized Spectral Clustering
+ */
+
 #include "mat.h"
 #include "kmpp.h"
 #include <math.h>
@@ -5,8 +9,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
+
+void print_eta(size_t i, size_t n, struct timespec * base, struct timespec * ts)
+{
+  double eta = 0, delta = 0;
+  if (i > 0) {
+    delta += ts->tv_sec - base->tv_sec;
+    delta += ((double)(ts->tv_nsec - base->tv_nsec)/1000000000);
+    eta = delta * ((((double)n / i)) - 1);
+    printf("%lu/%lu Time elapsed %.2f seconds, ETA %.2f seconds\n", i, n, delta, eta);
+  }
+}
 
 /*
+ * Creates the Weighted Adjacency Matrix W for
+ * the set of n d-dimensional samples in x
+ *
  * O(n^2 * d)
  */
 double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
@@ -32,6 +51,9 @@ double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
 }
 
 /*
+ * Creates the Normalized Graph Laplacian L for
+ * the set of n d-dimensional samples in x
+ *
  * O(n^2 * d)
  */
 double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
@@ -42,14 +64,12 @@ double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
 
   if ((w = weighted_adjacency_matrix(n, d, x)) == NULL)
     {
-      perror("failed to create weighted adjacency matrix");
       err = true;
       goto cleanup;
     }
 
   if ((l = mat_allocate(n, n)) == NULL)
     {
-      perror("failed to allocate normalized graph laplacian");
       err = true;
       goto cleanup;
 
@@ -57,7 +77,6 @@ double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
 
   if ((d_diag = vec_allocate(n)) == NULL)
     {
-      perror("failed to allocate d_diag");
       err = true;
       goto cleanup;
     }
@@ -76,7 +95,6 @@ double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
   }
 
 cleanup:
-
   if (w != NULL) {
     free(w);
   }
@@ -140,6 +158,7 @@ double * qr_iteration(size_t n, double * a_out)
   double * r = NULL;
   double * temp = NULL;
   size_t i = 0;
+  struct timespec base_ts = {0,}, ts = {0,}, last_ts = {0, };
 
   if ((q_out = mat_identity(n)) == NULL) {
     err = true;
@@ -161,7 +180,18 @@ double * qr_iteration(size_t n, double * a_out)
     goto cleanup;
   }
 
+  clock_gettime(CLOCK_MONOTONIC, &base_ts);
+  last_ts = base_ts;
+
   for (i = 0; i < n; i++) {
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    if (ts.tv_sec - last_ts.tv_sec > 1) {
+      printf("Running Modified Gram Schmidt ");
+      print_eta(i, n, &base_ts, &ts);
+      last_ts = ts;
+    }
+
     modified_gram_schmidt(n, a_out, q, r);
 
     mat_multiply(n, n, r, n, n, q, a_out);
@@ -183,9 +213,17 @@ double * qr_iteration(size_t n, double * a_out)
   }
 
  cleanup:
-  free(r);
-  free(q);
-  free(q_out_times_q);
+  if (r != NULL) {
+    free(r);
+  }
+
+  if (q != NULL) {
+    free(q);
+  }
+
+  if (q_out_times_q != NULL) {
+    free(q_out_times_q);
+  }
 
   if (err) {
     free(q_out);

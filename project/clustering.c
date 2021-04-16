@@ -5,7 +5,7 @@
 #include "nsc.h"
 #include "jaccard.h"
 
-void prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data, PyObject * py_labels, size_t * labels)
+void scan_input(size_t n, size_t d, PyObject * py_data, double * data, PyObject * py_labels, size_t * labels)
 {
   size_t i, j;
 
@@ -17,7 +17,7 @@ void prj_scan_input(size_t n, size_t d, PyObject * py_data, double * data, PyObj
   }
 }
 
-static PyObject * prj_main(PyObject *self, PyObject *args)
+static PyObject * nsc_and_kmpp(PyObject *self, PyObject *args)
 {
   bool err = false;
   
@@ -35,7 +35,7 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
 
   (void)self;
 
-  if(!PyArg_ParseTuple(args, "IIIIOO:prj_main", &k, &n, &d, &m, &py_data, &py_labels)) {
+  if(!PyArg_ParseTuple(args, "IIIIOO:nsc_and_kmpp", &k, &n, &d, &m, &py_data, &py_labels)) {
     err = true; goto cleanup;
   }
 
@@ -48,7 +48,7 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
     }
   memset(orig_labels, 0, sizeof(size_t) * n);
 
-  prj_scan_input(n, d, py_data, data, py_labels, orig_labels);
+  scan_input(n, d, py_data, data, py_labels, orig_labels);
 
   if ((nsc_labels = (size_t *)malloc(sizeof(size_t) * n)) == NULL) {
     err = true; goto cleanup;
@@ -74,10 +74,21 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
   PyTuple_SET_ITEM(py_labels_tuple, 4,
 		   PyFloat_FromDouble(jaccard_measure(n, nsc_labels, orig_labels)));
  cleanup:
-  free(nsc_labels);
-  free(kmpp_labels);
-  free(orig_labels);
-  free(data);
+  if (nsc_labels != NULL) {
+    free(nsc_labels);
+  }
+
+  if (kmpp_labels != NULL) {
+    free(kmpp_labels);    
+  }
+
+  if (orig_labels != NULL) {
+    free(orig_labels);    
+  }
+
+  if (data != NULL) {
+    free(data);
+  }
 
   if (err) {
     if (py_labels_tuple != NULL) {
@@ -89,21 +100,21 @@ static PyObject * prj_main(PyObject *self, PyObject *args)
   return py_labels_tuple;
 }
 
-static PyMethodDef prj_methods[] = {
-    {"prj_main", (PyCFunction) prj_main, METH_VARARGS, ""},
+static PyMethodDef clustering_methods[] = {
+    {"nsc_and_kmpp", (PyCFunction) nsc_and_kmpp, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
 static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "prj_lib", /* name of module */
+    "clustering", /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,  /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-    prj_methods /* the PyMethodDef array from before containing the methods of the extension */
+    clustering_methods /* the PyMethodDef array from before containing the methods of the extension */
 };
 
 
-PyMODINIT_FUNC PyInit_prj_lib(void)
+PyMODINIT_FUNC PyInit_clustering(void)
 {
     return PyModule_Create(&moduledef);
 }
