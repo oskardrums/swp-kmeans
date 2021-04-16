@@ -194,7 +194,7 @@ double * qr_iteration(size_t n, double * a_out)
 
     modified_gram_schmidt(n, a_out, q, r);
 
-    mat_multiply(n, n, r, n, n, q, a_out);
+    mat_upper_triangular_multiply(n, n, r, n, n, q, a_out);
 
     mat_multiply(n, n, q_out, n, n, q, q_out_times_q);
 
@@ -209,7 +209,6 @@ double * qr_iteration(size_t n, double * a_out)
     if (converged) {
       break;
     }
-
   }
 
  cleanup:

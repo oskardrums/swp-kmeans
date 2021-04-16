@@ -252,7 +252,11 @@ static struct PyModuleDef moduledef = {
     "clustering", /* name of module */
     NULL, /* module documentation, may be NULL */
     -1,  /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
-    clustering_methods /* the PyMethodDef array from before containing the methods of the extension */
+    clustering_methods /* the PyMethodDef array from before containing the methods of the extension */,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 

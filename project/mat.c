@@ -111,27 +111,28 @@ void mat_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
   }
 }
 
-
 /*
- * num_cols >= num_out_cols
- * O(num_rows * num_out_cols)
+ * mat1 is upper triangular
+ * num_cols1 == num_rows2
+ * O((num_rows1 / 2) * num_cols2 * num_cols1)
  */
-void mat_trim_and_normalize_cols(size_t num_rows, size_t num_cols, double * mat,
-				 size_t num_out_cols, double * mat_out)
+void mat_upper_triangular_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
+				   size_t num_rows2, size_t num_cols2, const double * mat2,
+				   double * mat_out)
 {
-  double mat_entry = 0, row_sum = 0;
-  size_t row, col;
+  double mat_entry;
+  size_t row, col, k;
 
-  for (row = 0; row < num_rows; ++row) {
-    row_sum = 0;
+  (void)num_rows2;
 
-    for (col = 0; col < num_out_cols; ++col) {
-	mat_entry = mat[(row * num_cols) + col];
-	row_sum += mat_entry * mat_entry;
-    }
-
-    for (col = 0; col < num_out_cols; ++col) {
-      mat_out[(row * num_out_cols) + col] = mat[(row * num_cols) + col] / sqrt(row_sum);
+  for (row = 0; row < num_rows1; ++row) {
+    for (col = 0; col < num_cols2; ++col) {
+      mat_entry = 0;
+      /* only sum the elements that are above the main diagonal */
+      for (k = row; k < num_cols1; ++k) {
+	mat_entry += mat1[(row * num_cols1) + k] * mat2[(k * num_cols2) + col];
+      }
+      mat_out[(row * num_cols2) + col] = mat_entry;
     }
   }
 }
@@ -182,6 +183,10 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
   return mat_out;
 }
 
+/*
+ * Returns true if and only if each entry in mat1 is at most EPSILON away from
+ * the corresponding entry in mat2 in absolute value
+ */
 bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
 {
   size_t i, j;
@@ -204,6 +209,10 @@ bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const
 
 }
 
+/*
+ * Returns true if and only if each entry in mat1 is at most EPSILON away from
+ * the corresponding entry in mat2
+ */
 bool mat_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
 {
   size_t i, j;
