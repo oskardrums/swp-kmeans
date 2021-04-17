@@ -17,7 +17,7 @@ static void print_eta(size_t i, size_t n, time_t base, time_t ts)
   if (i > 0) {
     delta += ts - base;
     eta = delta * ((((double)n / i)) - 1);
-    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\Expected total %.2fs\n", i, n, delta, eta, delta + eta);
+    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\tExpected total %.2fs\n", i, n, delta, eta, delta + eta);
   }
 }
 
