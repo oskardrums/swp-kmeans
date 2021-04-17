@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/random.h>
+#include <time.h>
 
 static size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_cols, const double * w)
 {
@@ -99,23 +99,12 @@ cleanup:
 
 static size_t kmpp_random_size_t(size_t n)
 {
-  size_t result = 0;
-
-  while (getrandom(&result, sizeof(result), 0) < 0 && errno == EINTR);
-
-  return result % n;
+  return rand() % n;
 }
 
 static double kmpp_random_double(double r)
 {
-  uint64_t temp = 0;
-  double result = 0;
-
-  while (getrandom(&result, sizeof(result), 0) < 0 && errno == EINTR);
-
-  result = r * ((double)temp/((1l << 32) - 1));
-
-  return result;
+  return ((double)rand() * r /(double)RAND_MAX);
 }
 
 static double kmpp_min_dist_squared(const double * centroids, size_t num_centroids, const double * vec, size_t num_cols)
@@ -200,6 +189,7 @@ static double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, siz
 size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
 {
   double * initial_centroids = NULL;
+  srand(time(NULL));
 
   if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
     return NULL;
