@@ -219,6 +219,7 @@ def main():
         write_labels(n, k, nsc_labels, f)
         write_labels(n, k, kmpp_labels, f)
 
+    print(f"Drawing visualization at ./clusters.pdf")
     desc = f"""
     Clustered data was generated with parameters n={n}, k={initial_k}, d={d}
     Both algorithms created K={k} clusters
