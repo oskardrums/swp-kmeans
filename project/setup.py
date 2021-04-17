@@ -8,7 +8,7 @@ setup(
             'clustering',
             sources=['kmeans.c', 'mat.c', 'clustering.c', 'nsc.c', 'jaccard.c'],
             extra_link_args=["-flto"],
-            extra_compile_args=["-std=c99", "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-flto", "-I/usr/include/linux"]
+            extra_compile_args=["-std=c99", "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-flto"]
         ),
     ]
 )

@@ -11,14 +11,13 @@
 #include <stdbool.h>
 #include <time.h>
 
-static void print_eta(size_t i, size_t n, struct timespec * base, struct timespec * ts)
+static void print_eta(size_t i, size_t n, time_t base, time_t ts)
 {
   double eta = 0, delta = 0;
   if (i > 0) {
-    delta += ts->tv_sec - base->tv_sec;
-    delta += ((double)(ts->tv_nsec - base->tv_nsec)/1000000000);
+    delta += ts - base;
     eta = delta * ((((double)n / i)) - 1);
-    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\n", i, n, delta, eta);
+    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\Expected total %.2fs\n", i, n, delta, eta, delta + eta);
   }
 }
 
@@ -158,7 +157,7 @@ static double * qr_iteration(size_t n, double * a_out)
   double * r = NULL;
   double * temp = NULL;
   size_t i = 0;
-  struct timespec base_ts = {0,}, ts = {0,}, last_ts = {0, };
+  time_t base_ts = 0, ts = 0, last_ts = 0;
 
   if ((q_out = mat_identity(n)) == NULL) {
     err = true;
@@ -180,15 +179,15 @@ static double * qr_iteration(size_t n, double * a_out)
     goto cleanup;
   }
 
-  clock_gettime(CLOCK_MONOTONIC, &base_ts);
+  base_ts = time(NULL);
   last_ts = base_ts;
 
   for (i = 0; i < n; i++) {
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    ts = time(NULL);
 
-    if (ts.tv_sec - last_ts.tv_sec > 1) {
+    if (ts - last_ts > 1) {
       printf("Running Modified Gram Schmidt ");
-      print_eta(i, n, &base_ts, &ts);
+      print_eta(i, n, base_ts, ts);
       last_ts = ts;
     }
 
