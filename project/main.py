@@ -6,6 +6,8 @@ from sklearn.datasets import make_blobs
 import random
 import struct
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from clustering import nsc, kmpp
