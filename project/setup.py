@@ -6,7 +6,9 @@ setup(
     ext_modules=[
         Extension(
             'clustering',
-            sources=['kmeans.c', 'mat.c', 'clustering.c', 'nsc.c', 'log.c', 'jaccard.c']
+            sources=['kmeans.c', 'mat.c', 'clustering.c', 'nsc.c', 'jaccard.c'],
+            extra_link_args=["-flto"],
+            extra_compile_args=["-std=c99", "-Wall", "-Wextra", "-Wpedantic", "-Werror", "-flto"]
         ),
     ]
 )

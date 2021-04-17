@@ -11,14 +11,14 @@
 #include <stdbool.h>
 #include <time.h>
 
-void print_eta(size_t i, size_t n, struct timespec * base, struct timespec * ts)
+static void print_eta(size_t i, size_t n, struct timespec * base, struct timespec * ts)
 {
   double eta = 0, delta = 0;
   if (i > 0) {
     delta += ts->tv_sec - base->tv_sec;
     delta += ((double)(ts->tv_nsec - base->tv_nsec)/1000000000);
     eta = delta * ((((double)n / i)) - 1);
-    printf("%lu/%lu Time elapsed %.2f seconds, ETA %.2f seconds\n", i, n, delta, eta);
+    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\n", i, n, delta, eta);
   }
 }
 
@@ -28,7 +28,7 @@ void print_eta(size_t i, size_t n, struct timespec * base, struct timespec * ts)
  *
  * O(n^2 * d)
  */
-double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
+static double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
 {
   double * w = NULL, wij = 0;
   size_t i, j;
@@ -56,7 +56,7 @@ double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
  *
  * O(n^2 * d)
  */
-double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
+static double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
 {
   double * l = NULL, *w = NULL, * d_diag = NULL;
   size_t i, j;
@@ -116,7 +116,7 @@ cleanup:
 /*
  * O(n^3)
  */
-void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
+static void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
 {
   double rij, l2norm = 0;
   size_t col, row, col2;
@@ -151,7 +151,7 @@ void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
 /*
  * O(n^4)
  */
-double * qr_iteration(size_t n, double * a_out)
+static double * qr_iteration(size_t n, double * a_out)
 {
   bool err = false, converged = false;
   double * q = NULL, * q_out = NULL, * q_out_times_q = NULL;
@@ -235,7 +235,7 @@ double * qr_iteration(size_t n, double * a_out)
 /*
  * O(n)
  */
-size_t eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const double * a)
+static size_t eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const double * a)
 {
   double gap = 0, max_gap = 0;
   size_t max_ind = 0, i, j = 0, j_prev = 0;
@@ -260,9 +260,9 @@ struct nsc_compare_diag_arg {
   double * mat;
 };
 
-struct nsc_compare_diag_arg comp_arg;
+static struct nsc_compare_diag_arg comp_arg;
 
-int nsc_compare_diag(const void * i_ptr, const void * j_ptr)
+static int nsc_compare_diag(const void * i_ptr, const void * j_ptr)
 {
   size_t i = *(size_t*)i_ptr;
   size_t j = *(size_t*)j_ptr;
@@ -278,7 +278,7 @@ int nsc_compare_diag(const void * i_ptr, const void * j_ptr)
   }
 }
 
-size_t * nsc_sort_eigenvalues(size_t n, double * a)
+static size_t * nsc_sort_eigenvalues(size_t n, double * a)
 {
   size_t i;
   size_t * eigenvalues = NULL;

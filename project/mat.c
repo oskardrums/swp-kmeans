@@ -1,6 +1,4 @@
 #include "mat.h"
-#include "log.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,7 +54,6 @@ double * vec_allocate(size_t d)
 
   if ((result = (double *) malloc (sizeof(double) * d)) == NULL)
     {
-      perror("out of memory");
       return NULL;
     }
 
@@ -76,7 +73,6 @@ double * mat_identity(size_t n)
   size_t i;
 
   if ((r = mat_allocate(n, n)) == NULL) {
-    perror("mat_identity: allocation failed");
     return NULL;
   }
 
@@ -128,7 +124,7 @@ void mat_upper_triangular_multiply(size_t num_rows1, size_t num_cols1, const dou
   for (row = 0; row < num_rows1; ++row) {
     for (col = 0; col < num_cols2; ++col) {
       mat_entry = 0;
-      /* only sum the elements that are above the main diagonal */
+      /* only sum entries above the main diagonal */
       for (k = row; k < num_cols1; ++k) {
 	mat_entry += mat1[(row * num_cols1) + k] * mat2[(k * num_cols2) + col];
       }
@@ -198,7 +194,9 @@ bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const
       mat2ij = mat2[(i * num_cols) + j];
       delta = fabs(fabs(mat1ij) - fabs(mat2ij));
 
+#ifndef EPSILON
 #define EPSILON 0.0001
+#endif
       if (delta > EPSILON) {
 	return false;
       }

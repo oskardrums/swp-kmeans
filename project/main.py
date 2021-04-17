@@ -14,7 +14,9 @@ KMPP_MAX_ITER = 300
 
 # Estimates of Maximum Capacity within 5 minutes
 MAX_N = 550
-MAX_K = 32
+# We can handle a much larger K value within 5 minutes,
+# but we don't want too many clusters if we don't have a lot of samples.
+MAX_K = 8
 
 
 def generate_data(k, n, d):
