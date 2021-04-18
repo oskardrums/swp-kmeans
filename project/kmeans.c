@@ -1,3 +1,6 @@
+/*
+ * K-means++ clustering algorithm
+ */
 #include "kmpp.h"
 #include "mat.h"
 #include <errno.h>
@@ -7,7 +10,14 @@
 #include <string.h>
 #include <time.h>
 
-static size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_cols, const double * w)
+
+/*
+ * Returns the nearest centroid among centroids to w
+ */
+static size_t kmpp_cluster(double * centroids,
+			   size_t num_clusters,
+			   size_t num_cols,
+			   const double * w)
 {
     size_t i, s = 0;
     double last, curr = 0;
@@ -23,8 +33,15 @@ static size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_c
     return s;
 }
 
-
-static size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
+/*
+ * Returns an array of labels where the i'th label matches the i'th row in mat
+ */
+static size_t * kmpp_converge(double * centroids,
+			      size_t num_clusters,
+			      size_t num_rows,
+			      size_t num_cols,
+			      const double * mat,
+			      size_t max_iters)
 {
   bool err = false;
   size_t iter, i, j;
@@ -33,14 +50,12 @@ static size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t nu
 
   cardinals = (size_t *)malloc(sizeof(size_t) * num_clusters);
   if (cardinals == NULL) {
-    err = true;
-    goto cleanup;
+    err = true; goto cleanup;
   }
 
   clusters = (size_t *)malloc(sizeof(size_t) * num_rows);
   if (clusters == NULL) {
-    err = true;
-    goto cleanup;
+    err = true; goto cleanup;
   }
   memset(clusters, 0, sizeof(size_t) * num_rows);
 
@@ -48,8 +63,7 @@ static size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t nu
 
   centroids_b = (double *)malloc(sizeof(double) * num_clusters * num_cols);
   if (centroids_b == NULL) {
-    err = true;
-    goto cleanup;
+    err = true; goto cleanup;
   }
   memset(centroids_b, 0, sizeof(double) * num_clusters * num_cols);
 
@@ -113,22 +127,6 @@ static double kmpp_random_double(double r)
   return ((double)rand() * r /(double)RAND_MAX);
 }
 
-static double kmpp_min_dist_squared(const double * centroids, size_t num_centroids, const double * vec, size_t num_cols)
-{
-  double min_dist_squared = 0, cur_dist_squared = 0;
-  size_t z = 0;
-
-  min_dist_squared = vec_distance_squared(num_cols, vec, &(centroids[0 * num_cols]));
-
-  for (z = 1; z < num_centroids; ++z) {
-    cur_dist_squared = vec_distance_squared(num_cols, vec, &(centroids[z * num_cols]));
-    if (cur_dist_squared < min_dist_squared) {
-      min_dist_squared = cur_dist_squared;
-    }
-  }
-  return min_dist_squared;
-}
-
 static double kmpp_half(size_t n)
 {
   return (n & 1) ? ((n - 1) / 2) : (n / 2);
@@ -152,6 +150,13 @@ static size_t kmpp_binary_search(size_t n, double * cdf, double r)
   return i;
 }
 
+/*
+ * Returns a random integer in the range [0, n - 1] with
+ * distribution described by the cumulative distribution function cdf,
+ * which is a monotonically ascending array of doubles,
+ * by drawing a random double r and finding the smallest index i for
+ * which cdf[i] > r
+ */
 static size_t kmpp_random_size_t_with_cdf(size_t n, double * cdf)
 {
   double random_double = 0;
@@ -161,6 +166,30 @@ static size_t kmpp_random_size_t_with_cdf(size_t n, double * cdf)
   return kmpp_binary_search(n, cdf, random_double);
 }
 
+/*
+ * Returns the minimal squared euclidean distance of vec from any
+ * vector in centroids.
+ */
+static double kmpp_min_dist_squared(const double * centroids, size_t num_centroids, const double * vec, size_t num_cols)
+{
+  double min_dist_squared = 0, cur_dist_squared = 0;
+  size_t z = 0;
+
+  min_dist_squared = vec_distance_squared(num_cols, vec, &(centroids[0 * num_cols]));
+
+  for (z = 1; z < num_centroids; ++z) {
+    cur_dist_squared = vec_distance_squared(num_cols, vec, &(centroids[z * num_cols]));
+    if (cur_dist_squared < min_dist_squared) {
+      min_dist_squared = cur_dist_squared;
+    }
+  }
+  return min_dist_squared;
+}
+
+/*
+ * Returns an array of num_clusters viable centroids for K-means algorithm
+ * among the data points given in mat.
+ */
 static double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat)
 {
   double * cdf = NULL, * centroids = NULL;
@@ -194,12 +223,22 @@ static double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, siz
   return centroids;
 }
 
-size_t k_means_pp(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters, size_t ** labels)
+/*
+ * Clusters the rows of mat into num_clusters clusters and stores
+ * the resulting labels for each row in an array pointed to by labels.
+ * Returns the num_clusters or 0 in case of error.
+ */
+size_t k_means_pp(size_t num_clusters,
+		  size_t num_rows,
+		  size_t num_cols,
+		  const double * mat,
+		  size_t max_iters,
+		  size_t ** labels)
 {
   double * initial_centroids = NULL;
   size_t * result = NULL;
-  
-  initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat);  
+
+  initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat);
   if (initial_centroids == NULL) {
     return 0;
   }
@@ -210,7 +249,7 @@ size_t k_means_pp(size_t num_clusters, size_t num_rows, size_t num_cols, const d
 			 num_cols,
 			 mat,
 			 max_iters);
-  
+
   if (result == NULL) {
     return 0;
   }

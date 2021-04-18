@@ -1,3 +1,6 @@
+/*
+ * Common real-valued matrices operations
+ */
 #include "mat.h"
 #include <math.h>
 #include <stdio.h>
@@ -19,20 +22,29 @@ void mat_dump(size_t num_rows, size_t num_cols, const double * mat)
   }
 }
 
-double vec_distance_squared(size_t d, const double * v1, const double * v2)
+/*
+ * Returns the squared euclidean distance between vec1 and vec2.
+ *
+ * O(num_entries)
+ */
+double vec_distance_squared(size_t num_entries,
+			    const double * vec1,
+			    const double * vec2)
 {
-  double r = 0, a = 0;
-  size_t j;
+  double result = 0, temp = 0;
+  size_t i;
 
-  for (j = 0; j < d; ++j) {
-    a = v1[j] - v2[j];
-    r += a * a;
+  for (i = 0; i < num_entries; ++i) {
+    temp = vec1[i] - vec2[i];
+    result += temp * temp;
   }
 
-  return r;
+  return result;
 }
 
 /*
+ * Returns the squared euclidean norm of the col'th column of mat.
+ *
  * O(num_rows)
  */
 double mat_col_norm_squared(size_t col, size_t num_rows, size_t num_cols, const double * mat)
@@ -84,7 +96,9 @@ double * mat_identity(size_t n)
 }
 
 /*
- * num_cols1 == num_rows2
+ * If num_cols1 == num_rows2, calculates mat1 * mat2 and stores the result
+ * in mat_out.
+ *
  * O(num_rows1 * num_cols2 * num_cols1)
  */
 void mat_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
@@ -108,9 +122,10 @@ void mat_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
 }
 
 /*
- * mat1 is upper triangular
- * num_cols1 == num_rows2
- * O((num_rows1 / 2) * num_cols2 * num_cols1)
+ * If mat1 is upper triangular and num_cols1 == num_rows2, calculates
+ * mat1 * mat2 and stores the result in mat_out.
+ *
+ * O(num_rows1 * num_cols2 * num_cols1), but faster than mat_multiply
  */
 void mat_upper_triangular_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
 				   size_t num_rows2, size_t num_cols2, const double * mat2,
@@ -133,6 +148,11 @@ void mat_upper_triangular_multiply(size_t num_rows1, size_t num_cols1, const dou
   }
 }
 
+/*
+ * Normalizes each row of mat to unit norm
+ *
+ * O(num_rows * num_cols)
+ */
 void mat_normalize_rows(size_t num_rows, size_t num_cols, double * mat)
 {
   double mat_entry = 0, row_squares_sum = 0;
@@ -156,11 +176,16 @@ void mat_normalize_rows(size_t num_rows, size_t num_cols, double * mat)
 }
 
 /*
- * num_cols >= num_out_cols
+ * If num_cols >= num_out_cols returns a new matrix composed from the
+ * columns described in the given column index cols.
+ *
  * O(num_rows * num_out_cols)
  */
-double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
-		       size_t num_out_cols, size_t * indices)
+double * mat_copy_cols(size_t num_rows,
+		       size_t num_cols,
+		       const double * mat,
+		       size_t num_out_cols,
+		       size_t * cols)
 {
   size_t row, col, i;
   double * mat_out = NULL;
@@ -170,7 +195,7 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
   }
 
   for (i = 0; i < num_out_cols; ++i) {
-    col = indices[i];
+    col = cols[i];
     for (row = 0; row < num_rows; ++row) {
       mat_out[(row * num_out_cols) + i] = mat[(row * num_cols) + col];
     }
@@ -181,9 +206,14 @@ double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
 
 /*
  * Returns true if and only if each entry in mat1 is at most EPSILON away from
- * the corresponding entry in mat2 in absolute value
+ * the corresponding entry in mat2 in absolute value.
+ *
+ * O(num_rows * num_cols)
  */
-bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
+bool mat_abs_equals(size_t num_rows,
+		    size_t num_cols,
+		    const double * mat1,
+		    const double * mat2)
 {
   size_t i, j;
   double delta = 0, mat1ij = 0, mat2ij = 0;
@@ -210,6 +240,8 @@ bool mat_abs_equals(size_t num_rows, size_t num_cols, const double * mat1, const
 /*
  * Returns true if and only if each entry in mat1 is at most EPSILON away from
  * the corresponding entry in mat2
+ *
+ * O(num_rows * num_cols)
  */
 bool mat_equals(size_t num_rows, size_t num_cols, const double * mat1, const double * mat2)
 {

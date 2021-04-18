@@ -1,3 +1,4 @@
+/* header file for common matrices operations */
 #ifndef __MAT_H
 #define __MAT_H
 
@@ -19,12 +20,10 @@ double * mat_identity(size_t);
 void mat_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
 		  size_t num_rows2, size_t num_cols2, const double * mat2,
 		  double * mat_out);
+
 void mat_upper_triangular_multiply(size_t num_rows1, size_t num_cols1, const double * mat1,
 				   size_t num_rows2, size_t num_cols2, const double * mat2,
 				   double * mat_out);
-
-void mat_trim_and_normalize_cols(size_t num_rows, size_t num_cols, double * mat,
-				 size_t num_out_cols, double * mat_out);
 
 double * mat_copy_cols(size_t num_rows, size_t num_cols, const double * mat,
 		       size_t num_out_cols, size_t * indices);

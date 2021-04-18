@@ -1,3 +1,4 @@
+/* header file for Jaccard measure calculation */
 #ifndef __JACCARD_H
 #define __JACCARD_H
 
