@@ -20,7 +20,8 @@ from clustering import nsc, kmpp
 KMPP_MAX_ITER = 300
 
 # Estimates of Maximum Capacity within 5 minutes
-MAX_N = 550
+# local tests suggests setting MAX_N = 550, but for nova it seems 350 is our current limit
+MAX_N = 350
 # We can handle a much larger K value within 5 minutes,
 # but we don't want too many clusters if we don't have a lot of samples.
 MAX_K = 8

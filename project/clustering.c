@@ -9,10 +9,11 @@
 #include "nsc.h"
 #include "jaccard.h"
 
-enum clustering_algorithm {
-			   ALGORITHM_NORMALIZED_SPECTRAL_CLUSTERING,
-			   ALGORITHM_KMEANS_PP,
-};
+enum clustering_algorithm
+  {
+   ALGORITHM_NORMALIZED_SPECTRAL_CLUSTERING,
+   ALGORITHM_KMEANS_PP,
+  };
 
 /*
  * Fills data and labels with entries from the given respective Python lists
