@@ -7,10 +7,15 @@ import random
 import struct
 import numpy as np
 import matplotlib
+
+# The following line must run prior to importing pyplot to stop matplotlib from
+# trying to use an Xserver, which is not not needed and is
+# not expected to be available in production
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from clustering import nsc, kmpp
+
 
 KMPP_MAX_ITER = 300
 
@@ -71,10 +76,10 @@ def write_labels(n, k, labels, f):
     Writes clusters labels to file f
     """
     cluster_members = {cluster : [] for cluster in range(k)}
-    
+
     for i in range(n):
         cluster_members[labels[i]].append(i)
-        
+
     for cluster in range(k):
         f.write(b", ".join(map(lambda x: str(x).encode(), cluster_members[cluster])))
         f.write(b"\n")
@@ -117,13 +122,14 @@ def valid_parameters(k, n):
     """
     return 0 < k < n
 
+
 def normalized_spectral_clustering(samples, labels, k=0):
     """
     Takes an array of n d-dimensional observations and
-    returns 3-tuple where the 1st elemenet the number of 
+    returns 3-tuple where the 1st elemenet the number of
     calculated clusters, the 2nd elemenet is an array of n
-    labels such that the i'th label is the number of the cluster 
-    matched to the i'th observation, and the 3nd elemenet is the 
+    labels such that the i'th label is the number of the cluster
+    matched to the i'th observation, and the 3nd elemenet is the
     Jaccard Measure of the given labels and the calculated labels.
 
     Hence, labels is an array of labels considered the source of truth for
@@ -138,7 +144,7 @@ def normalized_spectral_clustering(samples, labels, k=0):
                                              samples.flatten().tolist(),
                                              labels.flatten().tolist())
     calculated_labels = np.array(zip(*struct.iter_unpack("Q", binary_labels)).__next__())
-    
+
     return k, calculated_labels, jaccard_measure
 
 
@@ -146,8 +152,8 @@ def k_means_pp(samples, labels, k):
     """
     Takes an array of n d-dimensional observations and
     returns 2-tuple where the 1st elemenet is an array of n
-    labels such that the i'th label is the number of the cluster 
-    matched to the i'th observation, and the 2nd elemenet is the 
+    labels such that the i'th label is the number of the cluster
+    matched to the i'th observation, and the 2nd elemenet is the
     Jaccard Measure of the given labels and the calculated labels.
 
     Hence, labels is an array of labels considered the source of truth for
@@ -157,13 +163,13 @@ def k_means_pp(samples, labels, k):
     The parameter k is the number of clusters to create.
     """
     n, d = samples.shape
-    binary_labels, jaccard_measure =  kmpp(k, n, d, 300,
+    _, binary_labels, jaccard_measure =  kmpp(k, n, d, 300,
                                            samples.flatten().tolist(),
                                            labels.flatten().tolist())
     calculated_labels = np.array(zip(*struct.iter_unpack("Q", binary_labels)).__next__())
-    
+
     return calculated_labels, jaccard_measure
-    
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -200,7 +206,7 @@ def main():
         parser.parse_args(["-h"])
         return
 
-    print(f"Generating data with paramters n={n}, k={initial_k}, d={d}")
+    print(f"Generating data with parameters n={n}, k={initial_k}, d={d}")
     data, clusters = generate_data(initial_k, n, d)
 
     print(f"Writing data to ./data.txt")
@@ -211,10 +217,10 @@ def main():
 
     print(f"Clustering data with Normalized Spectral Clustering")
     k, nsc_labels, nsc_jaccard = normalized_spectral_clustering(data, clusters, k)
-    
+
     print(f"Clustering data with K-means++")
     kmpp_labels, kmpp_jaccard = k_means_pp(data, clusters, k)
-    
+
     print(f"Writing calculated clusters to ./clusters.txt")
     with open("./clusters.txt", "wb") as f:
         f.write(b"%u\n" % k)

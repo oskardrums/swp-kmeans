@@ -23,6 +23,7 @@ static size_t kmpp_cluster(double * centroids, size_t num_clusters, size_t num_c
     return s;
 }
 
+
 static size_t * kmpp_converge(double * centroids, size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
 {
   bool err = false;
@@ -97,6 +98,11 @@ cleanup:
   return clusters;
 }
 
+static void kmpp_random_init()
+{
+  srand(time(NULL));
+}
+
 static size_t kmpp_random_size_t(size_t n)
 {
   return rand() % n;
@@ -160,6 +166,8 @@ static double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, siz
   double * cdf = NULL, * centroids = NULL;
   size_t j, i, k = 0;
 
+  kmpp_random_init();
+
   cdf = vec_allocate(num_rows);
   if (cdf == NULL) {
     return NULL;
@@ -186,14 +194,27 @@ static double * kmpp_initial_centroids(size_t num_clusters, size_t num_rows, siz
   return centroids;
 }
 
-size_t * kmpp(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters)
+size_t k_means_pp(size_t num_clusters, size_t num_rows, size_t num_cols, const double * mat, size_t max_iters, size_t ** labels)
 {
   double * initial_centroids = NULL;
-  srand(time(NULL));
-
-  if ((initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat)) == NULL) {
-    return NULL;
+  size_t * result = NULL;
+  
+  initial_centroids = kmpp_initial_centroids(num_clusters, num_rows, num_cols, mat);  
+  if (initial_centroids == NULL) {
+    return 0;
   }
 
-  return kmpp_converge(initial_centroids, num_clusters, num_rows, num_cols, mat, max_iters);
+  result = kmpp_converge(initial_centroids,
+			 num_clusters,
+			 num_rows,
+			 num_cols,
+			 mat,
+			 max_iters);
+  
+  if (result == NULL) {
+    return 0;
+  }
+
+  *labels = result;
+  return num_clusters;
 }

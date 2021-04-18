@@ -1,7 +1,7 @@
 /*
  * Normalized Spectral Clustering
  */
-
+#include "nsc.h"
 #include "mat.h"
 #include "kmpp.h"
 #include <math.h>
@@ -11,13 +11,13 @@
 #include <stdbool.h>
 #include <time.h>
 
-static void print_eta(size_t i, size_t n, time_t base, time_t ts)
+static void nsc_qr_print_eta(size_t i, size_t n, time_t base, time_t ts)
 {
   double eta = 0, delta = 0;
   if (i > 0) {
     delta += ts - base;
     eta = delta * ((((double)n / i)) - 1);
-    printf("%lu/%lu\tTime elapsed %.2fs\tETA %.2fs\tExpected total %.2fs\n", i, n, delta, eta, delta + eta);
+    printf("QR iteration %lu/%lu\tTime elapsed %.2fs\tETA %.2fs\tExpected total %.2fs\n", i, n, delta, eta, delta + eta);
   }
 }
 
@@ -27,7 +27,7 @@ static void print_eta(size_t i, size_t n, time_t base, time_t ts)
  *
  * O(n^2 * d)
  */
-static double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
+static double * nsc_weighted_adjacency_matrix(size_t n, size_t d, const double * x)
 {
   double * w = NULL, wij = 0;
   size_t i, j;
@@ -55,13 +55,13 @@ static double * weighted_adjacency_matrix(size_t n, size_t d, const double * x)
  *
  * O(n^2 * d)
  */
-static double * normalized_graph_laplacian(size_t n, size_t d, const double * x)
+static double * nsc_normalized_graph_laplacian(size_t n, size_t d, const double * x)
 {
   double * l = NULL, *w = NULL, * d_diag = NULL;
   size_t i, j;
   bool err = false;
 
-  if ((w = weighted_adjacency_matrix(n, d, x)) == NULL)
+  if ((w = nsc_weighted_adjacency_matrix(n, d, x)) == NULL)
     {
       err = true;
       goto cleanup;
@@ -115,7 +115,7 @@ cleanup:
 /*
  * O(n^3)
  */
-static void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
+static void nsc_modified_gram_schmidt(size_t n, double * u, double * q, double * r)
 {
   double rij, l2norm = 0;
   size_t col, row, col2;
@@ -150,7 +150,7 @@ static void modified_gram_schmidt(size_t n, double * u, double * q, double * r)
 /*
  * O(n^4)
  */
-static double * qr_iteration(size_t n, double * a_out)
+static double * nsc_qr_iteration(size_t n, double * a_out)
 {
   bool err = false, converged = false;
   double * q = NULL, * q_out = NULL, * q_out_times_q = NULL;
@@ -186,12 +186,11 @@ static double * qr_iteration(size_t n, double * a_out)
     ts = time(NULL);
 
     if (ts - last_ts > 1) {
-      printf("Running Modified Gram Schmidt ");
-      print_eta(i, n, base_ts, ts);
+      nsc_qr_print_eta(i, n, base_ts, ts);
       last_ts = ts;
     }
 
-    modified_gram_schmidt(n, a_out, q, r);
+    nsc_modified_gram_schmidt(n, a_out, q, r);
 
     mat_upper_triangular_multiply(n, n, r, n, n, q, a_out);
 
@@ -234,7 +233,7 @@ static double * qr_iteration(size_t n, double * a_out)
 /*
  * O(n)
  */
-static size_t eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const double * a)
+static size_t nsc_eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const double * a)
 {
   double gap = 0, max_gap = 0;
   size_t max_ind = 0, i, j = 0, j_prev = 0;
@@ -254,6 +253,7 @@ static size_t eigengap_heuristic(size_t n, size_t * sorted_eigenvalues, const do
   return max_ind;
 }
 
+/* Layout for the static variable nsc_compare_diag_arg used by nsc_compare_diag */
 struct nsc_compare_diag_arg {
   size_t n;
   double * mat;
@@ -307,24 +307,20 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
   double * l = NULL, * q = NULL, * t = NULL;
   size_t * sorted_eigenvalues = NULL;
 
-  l = normalized_graph_laplacian(n, d, x);
+  l = nsc_normalized_graph_laplacian(n, d, x);
   if (l == NULL) {
-    err = true;
-    goto cleanup;
+    err = true; goto cleanup;
   }
 
-
-  if ((q = qr_iteration(n, l)) == NULL) {
-    err = true;
-    goto cleanup;
+  if ((q = nsc_qr_iteration(n, l)) == NULL) {
+    err = true; goto cleanup;
   }
 
   sorted_eigenvalues = nsc_sort_eigenvalues(n, l);
 
   if (k == 0) {
-    if ((k = eigengap_heuristic(n, sorted_eigenvalues, l)) == 0) {
-      err = true;
-      goto cleanup;
+    if ((k = nsc_eigengap_heuristic(n, sorted_eigenvalues, l)) == 0) {
+      err = true; goto cleanup;
     }
   }
 
@@ -335,21 +331,28 @@ size_t normalized_spectral_clustering(size_t k, size_t n, size_t d, const double
 
   mat_normalize_rows(n, k, t);
 
-  *y_out = kmpp(k, n, k, t, m);
-  if (*y_out == NULL) {
-    err = true;
-    goto cleanup;
+  k = k_means_pp(k, n, k, t, m, y_out);
+  if (k == 0) {
+    err = true; goto cleanup;
   }
 
 cleanup:
-  free(t);
-  free(q);
-  free(l);
-  free(sorted_eigenvalues);
+  if (t != NULL) free(t);
+
+  if (q != NULL) free(q);
+
+  if (l != NULL) free(l);
+
+  if (sorted_eigenvalues != NULL) {
+    free(sorted_eigenvalues);
+  }
 
   if (err) {
+    if (*y_out != NULL) {
+      free(*y_out);
+      *y_out = NULL;
+    }
     k = 0;
-    *y_out = NULL;
   }
 
   return k;
